@@ -1,0 +1,31 @@
+# image
+image: python:3.14
+
+stages:
+  - static_analysis
+  - test
+
+before_script:
+  - pip install uv
+  - uv sync
+
+pylint:
+  stage: static_analysis
+  script:
+    - uv run --extra linter pylint src/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
+mypy:
+  stage: static_analysis
+  script:
+    - uv run --extra typing mypy src/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
+test:
+  stage: test
+  script:
+    - uv run --extra test pytest ./
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
