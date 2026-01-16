@@ -1,10 +1,9 @@
 import asyncio
-import logging
+from loguru import logger
 from asyncio import StreamWriter, StreamReader
 
 from honeypot.client import ContainerSessionBridge
 
-logger = logging.getLogger(__name__)
 
 
 class TelnetBridge(ContainerSessionBridge):

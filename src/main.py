@@ -1,14 +1,10 @@
 import asyncio
-import logging
 import docker
+from loguru import logger
 
 from honeypot.connection.telnet import TelnetBridge
 from honeypot.container import HoneypotContainer, ContainerConfig, LOCAL_RESOURCES_DIR
-
-# TODO: configure a better logger than the basic config one
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from honeypot.logger.logger import setup_logging
 
 docker_client = docker.from_env()
 TELNET_CONTEXT_PATH = str(LOCAL_RESOURCES_DIR / "telnet")
@@ -17,6 +13,7 @@ TELNET = {"port": 2323, "container": TELNET_CONTAINER}
 
 
 async def start_server():
+    setup_logging()
     bridge = TelnetBridge(TELNET["container"])
 
     server = await asyncio.start_server(

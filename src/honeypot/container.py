@@ -1,12 +1,9 @@
 from dataclasses import dataclass, asdict
 from pathlib import Path
-import logging
-
+from loguru import logger
 from docker import DockerClient
 from docker.errors import ImageNotFound
 from docker.models.containers import Container
-
-logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOCAL_RESOURCES_DIR = BASE_DIR / "resources"  # RESOURCES LOCAL PATH CONST

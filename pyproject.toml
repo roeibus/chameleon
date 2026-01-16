@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "requests",
     "docker",
-    "disutils"
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
