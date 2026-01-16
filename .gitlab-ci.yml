@@ -19,7 +19,7 @@ pylint:
 mypy:
   stage: static_analysis
   script:
-    - uv run --extra typing mypy -install-types --non-interactive src/
+    - uv run --extra typing mypy --install-types --non-interactive src/
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
