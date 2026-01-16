@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 docker_client = docker.from_env()
-TELNET_CONTEXT_PATH = (LOCAL_RESOURCES_DIR / "telnet")
+TELNET_CONTEXT_PATH = str(LOCAL_RESOURCES_DIR / "telnet")
 TELNET_CONTAINER = HoneypotContainer(docker_client, ContainerConfig("telnet"), TELNET_CONTEXT_PATH)
 TELNET = {"port": 2323, "container": TELNET_CONTAINER}
 
