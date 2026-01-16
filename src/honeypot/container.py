@@ -8,8 +8,8 @@ from docker.models.containers import Container
 
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent
-LOCAL_RESOURCES_DIR = str(BASE_DIR / "resources")  # RESOURCES LOCAL PATH CONST
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+LOCAL_RESOURCES_DIR = BASE_DIR / "resources"  # RESOURCES LOCAL PATH CONST
 
 
 @dataclass
@@ -23,12 +23,13 @@ class ContainerConfig:
 
 class HoneypotContainer[Config: ContainerConfig]:
 
-    def __init__(self, client: DockerClient,
+    def __init__(self,
+                 client: DockerClient,
                  config: Config,
-                 context_path: str | None = None) -> None:
+                 context_path: str) -> None:
         self._client = client
         self._config = config
-        self._context_path = context_path or LOCAL_RESOURCES_DIR
+        self._context_path = context_path
         self._container: Container | None = None  # none means doesn't exist
 
     @property
@@ -69,4 +70,4 @@ class HoneypotContainer[Config: ContainerConfig]:
         except ImageNotFound:
             logger.info(f"Image not found: {self.config.image}, building...")
             self._client.images.build(path=self._context_path,
-                                      tag=self.config.image)
+                                      tag=self.config.image, )
