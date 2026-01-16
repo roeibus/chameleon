@@ -6,7 +6,8 @@ from honeypot.connection.telnet import TelnetBridge
 from honeypot.container import HoneypotContainer, ContainerConfig, LOCAL_RESOURCES_DIR
 
 # TODO: configure a better logger than the basic config one
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 docker_client = docker.from_env()
