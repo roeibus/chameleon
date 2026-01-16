@@ -15,7 +15,8 @@ dependencies = [
 
 [project.optional-dependencies]
 typing = [
-    "mypy"
+    "mypy",
+    "types-docker"
 ]
 linter =[
     "pylint"
