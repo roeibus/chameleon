@@ -3,34 +3,43 @@ import logging
 from abc import abstractmethod, ABC
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
 from functools import cached_property
+from socket import socket
 
 from honeypot.container import HoneypotContainer
 
 RECV_BUFFER_SIZE = 1024
 READ_BUFFER_SIZE = 1024
+SOCKET_PARAMS = {'stdin': 1, 'stdout': 1, 'stderr': 1, 'stream': 1}
 
 logger = logging.getLogger(__name__)
 
 
-class SessionBridge(ABC):
-    def __init__(self, container: HoneypotContainer) -> None:
+class ContainerSessionBridge(ABC):
+    def __init__(self, container: HoneypotContainer,
+                 socket_params: dict[str, int] | None = None) -> None:
         self._container = container
-
-    @cached_property
-    def container_socket(self):
-        params = {'stdin': 1, 'stdout': 1, 'stderr': 1, 'stream': 1}
-        return self._container.attach_socket(**params)._sock
+        self._socket_params = socket_params or SOCKET_PARAMS
 
     @abstractmethod
-    async def greet(self, writer: StreamWriter) -> None:
+    async def greet(self, reader: StreamReader,
+                    writer: StreamWriter) -> None:
         pass
+
+    @cached_property
+    def container_socket(self) -> socket:
+        """
+            We are deliberately giving the underlying sock class
+            instead of the socket wrapper given by attach socket
+            to avoid unwanted underlying logic (e.g: buffering data)
+        """
+        return self._container.attach_socket(params=self._socket_params)._sock
 
     async def handle_client(self, reader: StreamReader,
                             writer: StreamWriter) -> None:
         addr: tuple = writer.get_extra_info('peername')
 
         try:
-            await self.greet(writer)
+            await self.greet(reader, writer)
             await asyncio.to_thread(self._container.setup)
             loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
             await asyncio.gather(self.forward_input(reader, loop),
