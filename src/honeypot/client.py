@@ -1,9 +1,9 @@
 import asyncio
-from loguru import logger
 from abc import abstractmethod, ABC
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
 from functools import cached_property
 from socket import socket
+from loguru import logger
 
 from honeypot.container import HoneypotContainer
 
