@@ -1,9 +1,8 @@
 import asyncio
-from loguru import logger
 from asyncio import StreamWriter, StreamReader
+from loguru import logger
 
 from honeypot.client import ContainerSessionBridge
-
 
 
 class TelnetBridge(ContainerSessionBridge):
