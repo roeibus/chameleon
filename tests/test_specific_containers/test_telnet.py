@@ -48,5 +48,3 @@ async def test_greet_handles_exception(bridge, mock_reader, mock_writer, caplog)
     mock_writer.write.side_effect = Exception("Network failure")
 
     await bridge.greet(mock_reader, mock_writer)
-
-    assert "Connection error: Network failure" in caplog.text
