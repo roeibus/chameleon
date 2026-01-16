@@ -32,7 +32,7 @@ class ContainerSessionBridge(ABC):
             instead of the socket wrapper given by attach socket
             to avoid unwanted underlying logic (e.g: buffering data)
         """
-        return self._container.attach_socket(params=self._socket_params)._sock
+        return self._container.attach_socket(params=self._socket_params)._sock # pylint: disable=protected-access
 
     async def handle_client(self, reader: StreamReader,
                             writer: StreamWriter) -> None:
