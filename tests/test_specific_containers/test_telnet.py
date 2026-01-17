@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, call
-from honeypot.connection.telnet import TelnetBridge
+from honeypot.containers.telnet_bridge import TelnetBridge
 from honeypot.container import HoneypotContainer
 
 
