@@ -2,7 +2,7 @@ import asyncio
 import docker
 from loguru import logger
 
-from honeypot.connection.telnet import TelnetBridge
+from honeypot.containers.telnet_bridge import TelnetBridge
 from honeypot.container import HoneypotContainer, ContainerConfig, LOCAL_RESOURCES_DIR
 from honeypot.logger.logger import setup_logging
 
