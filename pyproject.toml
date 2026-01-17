@@ -6,20 +6,23 @@ build-backend = "hatchling.build"
 name = "Honeypot"
 descriptipn = "Honeypot"
 dynamic = ["version"]
-requires-python = ">= 3.14"
+requires-python = ">=3.12"
 dependencies = [
-    "requests"
+    "requests",
+    "docker",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
 typing = [
-    "mypy"
+    "mypy",
+    "types-docker"
 ]
 linter =[
     "pylint"
 ]
 test = [
-    "pytest"
+    "pytest-asyncio"
 ]
 
 
