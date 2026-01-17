@@ -2,10 +2,14 @@ import asyncio
 from asyncio import StreamWriter, StreamReader
 from loguru import logger
 
-from honeypot.client import ContainerSessionBridge
+from honeypot.containers.container_bridge import ContainerSessionBridge
 
 
 class TelnetBridge(ContainerSessionBridge):
+
+    @property
+    def name(self) -> str:
+        return "telnet"
 
     async def greet(self, reader: StreamReader,
                     writer: StreamWriter) -> None:
