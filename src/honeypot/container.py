@@ -41,13 +41,14 @@ class HoneypotContainer[Config: ContainerConfig]:
         return self._container.attach_socket(**kwargs)
 
     def setup(self) -> None:
+        logger.info("[+] Container Setup was called...")
         self._build_image()
         logger.info(f"[*] Spawning container from {self.config.image}...")
         self._container = self._client.containers.run(**asdict(self.config))
         logger.info(f"[+] Container {self._container.short_id} spawned successfully.")
 
     def teardown(self) -> None:
-
+        logger.info("[-] Container Teardown was called...")
         if self._container:
             try:
                 logger.info(f"[-] Nuking container {self._container.short_id}...")
