@@ -47,5 +47,5 @@ class RaceGroup:
                 pass
 
         for task in done:
-            if task.exception():
-                raise task.exception()
+            exc = task.exception()
+            if exc: raise exc
