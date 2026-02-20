@@ -23,5 +23,5 @@ class TelnetBridge(ContainerSessionBridge):
             await asyncio.sleep(1)
             writer.write(b"\r\nWelcome to Ubuntu.\r\n\r\n")
             await writer.drain()
-        except (OSError, EOFError) as e:
+        except Exception as e:
             logger.error(f"Connection error: {e}")
