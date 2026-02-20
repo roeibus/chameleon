@@ -10,3 +10,4 @@ __pycache__/
 Thumbs.db
 *uv*
 CLAUDE.md
+settings.local.json
