@@ -45,6 +45,6 @@ async def test_greet_successful_flow(bridge, mock_reader, mock_writer):
 
 @pytest.mark.asyncio
 async def test_greet_handles_exception(bridge, mock_reader, mock_writer, caplog):
-    mock_writer.write.side_effect = Exception("Network failure")
+    mock_writer.write.side_effect = OSError("Network failure")
 
     await bridge.greet(mock_reader, mock_writer)

@@ -28,7 +28,7 @@ class TestBridge(ContainerSessionBridge):
 def mock_loop():
     loop = MagicMock()
     loop.sock_sendall = AsyncMock()
-    loop.sock_recv = AsyncMock()
+    loop.sock_recv = AsyncMock(return_value=b'')
     return loop
 
 
@@ -51,6 +51,7 @@ def bridge(mock_container, mock_loop):
 @pytest.fixture
 def mock_reader():
     reader = AsyncMock(spec=StreamReader)
+    reader.read.return_value = b''
     return reader
 
 
@@ -128,6 +129,6 @@ async def test_handle_client_data_flow(bridge, mock_container, mock_reader, mock
 
 @pytest.mark.asyncio
 async def test_cleanup_on_setup_error(bridge, mock_container, mock_reader, mock_writer):
-    mock_container.setup.side_effect = RuntimeError("Fail")
+    mock_container.setup.side_effect = OSError("Fail")
     await bridge.handle_client(mock_reader, mock_writer)
     mock_container.teardown.assert_called_once()
