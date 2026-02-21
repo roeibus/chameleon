@@ -2,7 +2,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from loguru import logger
 from docker import DockerClient
-from docker.errors import APIError, ImageNotFound, NotFound
+from docker.errors import ImageNotFound
 from docker.models.containers import Container
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -54,7 +54,7 @@ class HoneypotContainer[Config: ContainerConfig]:
                 logger.info(f"[-] Nuking container {self._container.short_id}...")
                 self._container.kill()
                 self._container.remove()
-            except (APIError, NotFound) as e:
+            except Exception as e:
                 logger.error(f"Error during removal: {e}")
             finally:
                 self._container = None
