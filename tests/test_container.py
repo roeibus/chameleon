@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from docker.errors import ImageNotFound
+from docker.errors import ImageNotFound, APIError
 from dataclasses import asdict
 
 from honeypot.container import HoneypotContainer, ContainerConfig
@@ -88,7 +88,7 @@ def test_teardown_handles_no_container(honeypot):
 
 def test_teardown_handles_exception_gracefully(honeypot, mock_container_obj):
     honeypot._container = mock_container_obj
-    mock_container_obj.kill.side_effect = Exception("Docker is dead")
+    mock_container_obj.kill.side_effect = APIError("Docker is dead")
     honeypot.teardown()
     mock_container_obj.kill.assert_called_once()
     assert honeypot._container is None
