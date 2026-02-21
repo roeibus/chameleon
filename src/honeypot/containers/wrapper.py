@@ -1,21 +1,14 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from pathlib import Path
 from loguru import logger
 from docker import DockerClient
 from docker.errors import APIError, ImageNotFound, NotFound
 from docker.models.containers import Container
 
+from honeypot.containers.config import ContainerConfig
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOCAL_RESOURCES_DIR = BASE_DIR / "resources"  # RESOURCES LOCAL PATH CONST
-
-
-@dataclass
-class ContainerConfig:
-    image: str
-    detach: bool = True
-    tty: bool = True
-    stdin_open: bool = True
-    network_disabled: bool = False
+LOCAL_RESOURCES_DIR = BASE_DIR / "resources"
 
 
 class HoneypotContainer[Config: ContainerConfig]:
@@ -27,7 +20,7 @@ class HoneypotContainer[Config: ContainerConfig]:
         self._client = client
         self._config = config
         self._context_path = context_path
-        self._container: Container | None = None  # none means doesn't exist
+        self._container: Container | None = None
 
     @property
     def name(self):
@@ -67,5 +60,5 @@ class HoneypotContainer[Config: ContainerConfig]:
             self._client.images.get(self.config.image)
         except ImageNotFound:
             logger.info(f"Image not found: {self.config.image}, building...")
-            self._client.images.build(path=self._context_path,
+            _ = self._client.images.build(path=self._context_path,
                                       tag=self.config.image, )

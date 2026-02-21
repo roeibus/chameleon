@@ -1,0 +1,2 @@
+class BackendPropertyError(RuntimeError):
+    pass

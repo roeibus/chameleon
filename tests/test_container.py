@@ -3,7 +3,8 @@ from unittest.mock import MagicMock
 from docker.errors import ImageNotFound, APIError
 from dataclasses import asdict
 
-from honeypot.container import HoneypotContainer, ContainerConfig
+from honeypot.containers.wrapper import HoneypotContainer
+from honeypot.containers.config import ContainerConfig
 
 
 @pytest.fixture
