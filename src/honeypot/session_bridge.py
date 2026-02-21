@@ -27,12 +27,12 @@ class SessionBridge(ABC):
             logger.info("[+] New containers detected")
             try:
                 await self.handle_bridge(reader, writer)
-            except Exception as e:
+            except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
             finally:
                 logger.info("[-] Connection closed")
                 writer.close()
                 try:
                     await writer.wait_closed()
-                except Exception:
+                except OSError:
                     pass
