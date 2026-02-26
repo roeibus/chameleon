@@ -1,11 +1,12 @@
-import pytest
-from unittest.mock import MagicMock, AsyncMock
-import docker
+from unittest.mock import AsyncMock, MagicMock
 
-from honeypot.proxy.http_proxy_bridge import HttpProxyBridge
+import docker
+import pytest
+
 from honeypot.backend import Backend
-from honeypot.proxy.stream_backend import StreamBackend
 from honeypot.builder import BackendBuilder
+from honeypot.proxy.http_proxy_bridge import HttpProxyBridge
+from honeypot.proxy.stream_backend import StreamBackend
 
 
 @pytest.fixture

@@ -8,8 +8,8 @@ from honeypot.exc import BackendPropertyError
 
 class StreamBackend(Backend):
     def __init__(self, host: str, port: int) -> None:
-        self._host = host
-        self._port = port
+        self._host: str = host
+        self._port: int = port
         self._reader: StreamReader | None = None
         self._writer: StreamWriter | None = None
 
@@ -25,16 +25,17 @@ class StreamBackend(Backend):
             raise BackendPropertyError("StreamBackend is not connected")
         return self._writer
 
-    async def __aenter__(self) -> 'StreamBackend':
+    async def __aenter__(self) -> "StreamBackend":
         self._reader, self._writer = await asyncio.open_connection(
-            self._host, self._port)
+            self._host, self._port
+        )
         return self
 
     async def __aexit__(
-            self,
-            exc_type: type[BaseException] | None,
-            exc_val: BaseException | None,
-            exc_tb: TracebackType | None
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         if self._writer:
             self._writer.close()

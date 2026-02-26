@@ -1,4 +1,5 @@
 import asyncio
+
 import docker
 from loguru import logger
 
@@ -22,14 +23,10 @@ async def start_server():
     http_bridge = HttpProxyBridge(backend=builder.proxy(IOT_HOST, IOT_HTTP_PORT))
 
     telnet_server = await asyncio.start_server(
-        telnet_bridge.handle_client,
-        host='0.0.0.0',
-        port=TELNET_PORT
+        telnet_bridge.handle_client, host="0.0.0.0", port=TELNET_PORT
     )
     http_server = await asyncio.start_server(
-        http_bridge.handle_client,
-        host='0.0.0.0',
-        port=HTTP_PORT
+        http_bridge.handle_client, host="0.0.0.0", port=HTTP_PORT
     )
 
     telnet_addr = telnet_server.sockets[0].getsockname()

@@ -10,8 +10,6 @@ from honeypot.proxy.stream_backend import StreamBackend
 
 SOCKET_PARAMS = {"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1}
 
-# TODO: replace this builder with a bridge builder that does the building from 0 - 100
-
 
 class BackendBuilder:
     def __init__(

@@ -6,14 +6,14 @@ class Backend(ABC):
     """Reentrant: __aenter__ opens a connection, __aexit__ closes it."""
 
     @abstractmethod
-    async def __aenter__(self) -> 'Backend': ...
+    async def __aenter__(self) -> "Backend": ...
 
     @abstractmethod
     async def __aexit__(
-            self,
-            exc_type: type[BaseException] | None,
-            exc_val: BaseException | None,
-            exc_tb: TracebackType | None
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None: ...
 
     @abstractmethod

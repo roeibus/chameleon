@@ -37,13 +37,14 @@ class ContainerWrapper[Config: ContainerConfig = ContainerConfig]:
         return self._inner_container
 
     def attach_socket(self, **kwargs: dict[str, int]) -> socket:
-        return t.cast(socket, self.inner_container.attach_socket(**kwargs)._sock)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
+        sock_obj = self.inner_container.attach_socket(**kwargs)
+        return t.cast(socket, sock_obj._sock)  # type: ignore[union-attr]  # pylint: disable=protected-access
 
     def setup(self) -> None:
         logger.info("[+] Container Setup was called...")
         self._build_image()
         logger.info(f"[*] Spawning container from {self.config.image}...")
-        self._inner_container = self._client.containers.run(**asdict(self.config))  # pyright: ignore[reportAny]
+        self._inner_container = self._client.containers.run(**asdict(self.config))
         logger.info(
             f"[+] Container {self.inner_container.short_id} spawned successfully."
         )
