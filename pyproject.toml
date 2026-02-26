@@ -16,13 +16,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-typing = [
-    "mypy",
-    "types-docker"
-]
-linter = [
-    "pylint"
-]
 test = [
     "pytest-asyncio"
 ]

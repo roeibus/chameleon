@@ -38,7 +38,7 @@ class ContainerWrapper[Config: ContainerConfig = ContainerConfig]:
 
     def attach_socket(self, **kwargs: dict[str, int]) -> socket:
         sock_obj = self.inner_container.attach_socket(**kwargs)
-        return t.cast(socket, sock_obj._sock)  # type: ignore[union-attr]  # pylint: disable=protected-access
+        return t.cast(socket, sock_obj._sock)  # pyright: ignore[reportAttributeAccessIssue]
 
     def setup(self) -> None:
         logger.info("[+] Container Setup was called...")
