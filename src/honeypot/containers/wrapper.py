@@ -1,26 +1,26 @@
+import typing as t
 from dataclasses import asdict
 from pathlib import Path
-from loguru import logger
+from socket import socket
+
 from docker import DockerClient
 from docker.errors import APIError, ImageNotFound, NotFound
 from docker.models.containers import Container
+from loguru import logger
 
 from honeypot.containers.config import ContainerConfig
+from honeypot.exc import ContainerNotInitializedError
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOCAL_RESOURCES_DIR = BASE_DIR / "resources"
 
 
-class HoneypotContainer[Config: ContainerConfig]:
-
-    def __init__(self,
-                 client: DockerClient,
-                 config: Config,
-                 context_path: str) -> None:
-        self._client = client
-        self._config = config
-        self._context_path = context_path
-        self._container: Container | None = None
+class ContainerWrapper[Config: ContainerConfig = ContainerConfig]:
+    def __init__(self, client: DockerClient, config: Config, context_path: str) -> None:
+        self._client: DockerClient = client
+        self._config: Config = config
+        self._context_path: str = context_path
+        self._inner_container: Container | None = None
 
     @property
     def name(self):
@@ -30,35 +30,45 @@ class HoneypotContainer[Config: ContainerConfig]:
     def config(self) -> Config:
         return self._config
 
-    def attach_socket(self, **kwargs):
-        return self._container.attach_socket(**kwargs)
+    @property
+    def inner_container(self) -> Container:
+        if self._inner_container is None:
+            raise ContainerNotInitializedError("Inner container is not initialized.")
+        return self._inner_container
+
+    def attach_socket(self, **kwargs: dict[str, int]) -> socket:
+        return t.cast(socket, self.inner_container.attach_socket(**kwargs)._sock)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
 
     def setup(self) -> None:
         logger.info("[+] Container Setup was called...")
         self._build_image()
         logger.info(f"[*] Spawning container from {self.config.image}...")
-        self._container = self._client.containers.run(**asdict(self.config))
-        logger.info(f"[+] Container {self._container.short_id} spawned successfully.")
+        self._inner_container = self._client.containers.run(**asdict(self.config))  # pyright: ignore[reportAny]
+        logger.info(
+            f"[+] Container {self.inner_container.short_id} spawned successfully."
+        )
 
     def teardown(self) -> None:
         logger.info("[-] Container Teardown was called...")
-        if self._container:
+        if self._inner_container:
             try:
-                logger.info(f"[-] Nuking container {self._container.short_id}...")
-                self._container.kill()
-                self._container.remove()
+                logger.info(f"[-] Nuking container {self.inner_container.short_id}...")
+                self.inner_container.kill()
+                self.inner_container.remove()
             except (APIError, NotFound) as e:
                 logger.error(f"Error during removal: {e}")
             finally:
-                self._container = None
+                self._inner_container = None
         else:
             logger.debug("[-] Teardown called, but container does not exist.")
 
     def _build_image(self) -> None:
         logger.info(f"getting image: {self.config.image}")
         try:
-            self._client.images.get(self.config.image)
+            _ = self._client.images.get(self.config.image)
         except ImageNotFound:
             logger.info(f"Image not found: {self.config.image}, building...")
-            _ = self._client.images.build(path=self._context_path,
-                                      tag=self.config.image, )
+            _ = self._client.images.build(
+                path=self._context_path,
+                tag=self.config.image,
+            )

@@ -1,5 +1,6 @@
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from asyncio import StreamReader, StreamWriter
+
 from loguru import logger
 
 from honeypot.backend import Backend
@@ -12,7 +13,7 @@ MAX_OUTPUT_LOG = 100
 
 class SessionBridge(ABC):
     def __init__(self, backend: Backend) -> None:
-        self._backend = backend
+        self._backend: Backend = backend
 
     @property
     @abstractmethod
@@ -24,8 +25,8 @@ class SessionBridge(ABC):
         pass
 
     async def handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
-        addr: tuple[str,str] = writer.get_extra_info("peername")
-        with logger.contextualize(ip=addr[0], bridge=self.name):
+        ip: str = writer.get_extra_info("peername")[0] or "UNKNOWN"
+        with logger.contextualize(ip=ip, bridge=self.name):
             logger.info("[+] New containers detected")
             try:
                 await self._handle_client(reader, writer)

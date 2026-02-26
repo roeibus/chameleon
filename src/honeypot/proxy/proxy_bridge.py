@@ -1,10 +1,10 @@
 from abc import ABC
 from asyncio import StreamReader, StreamWriter
 
-from honeypot.bridge import BackendSessionBridge
+from honeypot.bridge import SessionBridge
 
 
-class ProxySessionBridge(BackendSessionBridge, ABC):
+class ProxySessionBridge(SessionBridge, ABC):
     """
         For future https/other proxy common code.
     """

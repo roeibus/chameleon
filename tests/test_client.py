@@ -3,14 +3,18 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock
 from asyncio import StreamReader, StreamWriter
 
-from honeypot.bridge import BackendSessionBridge
+from honeypot.bridge import SessionBridge
 from honeypot.backend import Backend
 
 
-class TestBridge(BackendSessionBridge):
+class TestBridge(SessionBridge):
     @property
     def name(self) -> str:
         return "test_honey"
+
+    async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
+        async with self._backend:
+            await self._forward(reader, writer)
 
 
 @pytest.fixture
