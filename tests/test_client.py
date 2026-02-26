@@ -3,49 +3,31 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock
 from asyncio import StreamReader, StreamWriter
 
-from honeypot.containers.container_bridge import ContainerSessionBridge
-from honeypot.container import HoneypotContainer
+from honeypot.bridge import SessionBridge
+from honeypot.backend import Backend
 
 
-class TestBridge(ContainerSessionBridge):
-    def __init__(self, container, mock_loop):
-        super().__init__(container)
-        self._mock_loop = mock_loop
-
+class TestBridge(SessionBridge):
     @property
     def name(self) -> str:
         return "test_honey"
 
-    @property
-    def loop(self):
-        return self._mock_loop
-
-    async def greet(self, reader, writer):
-        pass
+    async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
+        async with self._backend:
+            await self._forward(reader, writer)
 
 
 @pytest.fixture
-def mock_loop():
-    loop = MagicMock()
-    loop.sock_sendall = AsyncMock()
-    loop.sock_recv = AsyncMock(return_value=b'')
-    return loop
+def mock_backend():
+    backend = AsyncMock(spec=Backend)
+    backend.read.return_value = b''
+    backend.__aenter__.return_value = backend
+    return backend
 
 
 @pytest.fixture
-def mock_container():
-    container = MagicMock(spec=HoneypotContainer)
-    container.name = "test_honey"
-    socket_wrapper = MagicMock()
-    raw_socket = MagicMock()
-    socket_wrapper._sock = raw_socket
-    container.attach_socket.return_value = socket_wrapper
-    return container
-
-
-@pytest.fixture
-def bridge(mock_container, mock_loop):
-    return TestBridge(container=mock_container, mock_loop=mock_loop)
+def bridge(mock_backend):
+    return TestBridge(backend=mock_backend)
 
 
 @pytest.fixture
@@ -66,69 +48,65 @@ def mock_writer():
 
 
 @pytest.mark.asyncio
-async def test_forward_input_sends_to_socket(bridge, mock_container, mock_reader, mock_loop):
+async def test_forward_input_sends_to_backend(bridge, mock_backend, mock_reader):
     mock_reader.read.side_effect = [b'hello', b'']
-    raw_sock = mock_container.attach_socket.return_value._sock
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_input(mock_reader, raw_sock)
+        await bridge.forward_input(mock_reader)
 
-    mock_loop.sock_sendall.assert_called_with(raw_sock, b'hello')
+    mock_backend.write.assert_awaited_with(b'hello')
 
 
 @pytest.mark.asyncio
-async def test_forward_output_writes_to_client(bridge, mock_container, mock_writer, mock_loop):
-    raw_sock = mock_container.attach_socket.return_value._sock
-    mock_loop.sock_recv.side_effect = [b'response', b'']
+async def test_forward_output_writes_to_client(bridge, mock_backend, mock_writer):
+    mock_backend.read.side_effect = [b'response', b'']
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer, raw_sock)
+        await bridge.forward_output(mock_writer)
 
     mock_writer.write.assert_called_with(b'response')
 
 
 @pytest.mark.asyncio
-async def test_forward_output_drains_writer(bridge, mock_container, mock_writer, mock_loop):
-    raw_sock = mock_container.attach_socket.return_value._sock
-    mock_loop.sock_recv.side_effect = [b'response', b'']
+async def test_forward_output_drains_writer(bridge, mock_backend, mock_writer):
+    mock_backend.read.side_effect = [b'response', b'']
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer, raw_sock)
+        await bridge.forward_output(mock_writer)
 
     mock_writer.drain.assert_awaited()
 
 
 @pytest.mark.asyncio
-async def test_handle_client_calls_setup(bridge, mock_container, mock_reader, mock_writer):
+async def test_handle_client_calls_aenter(bridge, mock_backend, mock_reader, mock_writer):
     await bridge.handle_client(mock_reader, mock_writer)
-    mock_container.setup.assert_called_once()
+    mock_backend.__aenter__.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_handle_client_calls_teardown(bridge, mock_container, mock_reader, mock_writer):
+async def test_handle_client_calls_aexit(bridge, mock_backend, mock_reader, mock_writer):
     await bridge.handle_client(mock_reader, mock_writer)
-    mock_container.teardown.assert_called_once()
+    mock_backend.__aexit__.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_handle_client_closes_writer(bridge, mock_container, mock_reader, mock_writer):
+async def test_handle_client_closes_writer(bridge, mock_backend, mock_reader, mock_writer):
     await bridge.handle_client(mock_reader, mock_writer)
     mock_writer.close.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_handle_client_data_flow(bridge, mock_container, mock_reader, mock_writer, mock_loop):
+async def test_handle_client_data_flow(bridge, mock_backend, mock_reader, mock_writer):
     mock_reader.read.side_effect = [b'ls', b'']
-    mock_loop.sock_recv.side_effect = [b'ok', b'']
-    raw_socket = mock_container.attach_socket.return_value._sock
+    mock_backend.read.side_effect = [b'ok', b'']
 
     await bridge.handle_client(mock_reader, mock_writer)
 
-    mock_loop.sock_sendall.assert_called_with(raw_socket, b'ls')
+    mock_backend.write.assert_awaited_with(b'ls')
 
 
 @pytest.mark.asyncio
-async def test_cleanup_on_setup_error(bridge, mock_container, mock_reader, mock_writer):
-    mock_container.setup.side_effect = OSError("Fail")
+async def test_cleanup_on_setup_error(bridge, mock_backend, mock_reader, mock_writer):
+    mock_backend.__aenter__.side_effect = OSError("Fail")
     await bridge.handle_client(mock_reader, mock_writer)
-    mock_container.teardown.assert_called_once()
+    mock_writer.close.assert_called_once()
