@@ -9,6 +9,7 @@ from honeypot.containers.bridge import ContainerSessionBridge
 
 class TelnetBridge(ContainerSessionBridge):
     @property
+    @override
     def name(self) -> str:
         return "telnet"
 
@@ -22,9 +23,9 @@ class TelnetBridge(ContainerSessionBridge):
             await writer.drain()
             password = await reader.readline()  # Password
             logger.info(
-                f"Login attempt: "
-                f"username={username.strip().decode(errors='replace')!r}, "
-                f"password={password.strip().decode(errors='replace')!r}"
+                "Login attempt: "
+                + f"username={username.strip().decode(errors='replace')!r}, "
+                + f"password={password.strip().decode(errors='replace')!r}"
             )
             await asyncio.sleep(1)
             writer.write(b"\r\nWelcome to Ubuntu.\r\n\r\n")

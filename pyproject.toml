@@ -24,3 +24,10 @@ test = [
 [tool.hatch.version]
 path = "VERSION"
 pattern = "(?P<version>\\S+)"
+
+[tool.basedpyright]
+# docker-py and loguru ship incomplete stubs — unknown/Any diagnostics are their fault
+reportAny = "none"
+reportUnknownMemberType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownVariableType = "none"

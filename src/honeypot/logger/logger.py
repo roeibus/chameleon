@@ -2,14 +2,17 @@ import logging
 import sys
 from pathlib import Path
 from types import FrameType
-from loguru import logger
+from typing import override
+
+from loguru import Message, logger
 
 LOG_DIR = Path("/var/log/")
 LOG_DIR.mkdir(exist_ok=True)
 
 
 class InterceptHandler(logging.Handler):
-    def emit(self, record):
+    @override
+    def emit(self, record: logging.LogRecord) -> None:
         try:
             level = logger.level(record.levelname).name
         except ValueError:
@@ -26,7 +29,7 @@ class InterceptHandler(logging.Handler):
         )
 
 
-def router_sink(message):
+def router_sink(message: Message) -> None:
     record = message.record
     ip = record["extra"].get("ip")
 
@@ -35,7 +38,7 @@ def router_sink(message):
         log_file = LOG_DIR / f"{safe_ip}.log"
 
         with open(log_file, "a", encoding="utf-8") as f:
-            f.write(message)
+            _ = f.write(message)
 
 
 def setup_logging():
@@ -44,17 +47,19 @@ def setup_logging():
 
     logger.remove()
 
-    logger.add(
+    _ = logger.add(
         sys.stderr,
         level="INFO",
-        format="<green>{time:HH:mm:ss}</green> | "
-               "<level>{level: <8}</level> | "
-               "<cyan>{name}</cyan>:<cyan>{function}</cyan> - "
-               "<level>{message}</level>",
+        format=(
+            "<green>{time:HH:mm:ss}</green> | "
+            + "<level>{level: <8}</level> | "
+            + "<cyan>{name}</cyan>:<cyan>{function}</cyan> - "
+            + "<level>{message}</level>"
+        ),
         colorize=True
     )
 
-    logger.add(
+    _ = logger.add(
         f"{LOG_DIR}/honeypot.log",
         rotation="10 MB",
         retention="10 days",
@@ -63,7 +68,7 @@ def setup_logging():
         enqueue=True
     )
 
-    logger.add(
+    _ = logger.add(
         router_sink,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
         filter=lambda r: "ip" in r["extra"],  # specific log file for connected ip

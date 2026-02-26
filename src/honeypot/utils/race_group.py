@@ -4,15 +4,19 @@ from collections.abc import Coroutine
 from types import TracebackType
 from typing import Any
 
+from loguru import logger
+
 # async taskgroup won't work here because
 # we also need to cancel all tasks if they are successful
 
 
 class RaceGroup:
     def __init__(self) -> None:
-        self.tasks: list[Task[Any]] = []
+        self.tasks: list[Task[Any]] = []  # pyright: ignore[reportExplicitAny]
 
-    def create_task(self, coro: Coroutine[Any, Any, Any]) -> None:
+    def create_task(
+        self, coro: Coroutine[Any, Any, Any]  # pyright: ignore[reportExplicitAny]
+    ) -> None:
         task = asyncio.create_task(coro)
         self.tasks.append(task)
 
@@ -28,7 +32,9 @@ class RaceGroup:
         if exc_val:
             for task in self.tasks:
                 if not task.done():
-                    task.cancel()
+                    accepted = task.cancel()
+                    status = "accepted" if accepted else "already done"
+                    logger.debug(f"Cancel request for task {task.get_name()}: {status}")
             return
 
         if not self.tasks:
@@ -39,7 +45,9 @@ class RaceGroup:
         )
 
         for task in pending:
-            task.cancel()
+            accepted = task.cancel()
+            status = "accepted" if accepted else "already done"
+            logger.debug(f"Cancel request for task {task.get_name()}: {status}")
             try:
                 await task
             except asyncio.CancelledError:

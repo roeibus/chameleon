@@ -35,7 +35,10 @@ async def start_server():
     logger.info(f"[*] HTTP Proxy Honeypot listening on {http_addr}")
 
     async with telnet_server, http_server:
-        await asyncio.gather(telnet_server.serve_forever(), http_server.serve_forever())
+        await asyncio.gather(  # pyright: ignore[reportUnusedCallResult]
+            telnet_server.serve_forever(),
+            http_server.serve_forever()
+        )
 
 
 if __name__ == "__main__":
