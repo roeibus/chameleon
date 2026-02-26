@@ -1,17 +1,19 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, call
 from honeypot.containers.telnet_bridge import TelnetBridge
-from honeypot.container import HoneypotContainer
+from honeypot.backend import Backend
 
 
 @pytest.fixture
-def mock_container():
-    return MagicMock(spec=HoneypotContainer)
+def mock_backend():
+    backend = AsyncMock(spec=Backend)
+    backend.__aenter__.return_value = backend
+    return backend
 
 
 @pytest.fixture
-def bridge(mock_container):
-    return TelnetBridge(container=mock_container)
+def bridge(mock_backend):
+    return TelnetBridge(backend=mock_backend)
 
 
 @pytest.fixture
