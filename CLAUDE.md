@@ -55,7 +55,7 @@ Client → Bridge (TelnetBridge / HttpProxyBridge)
 - `src/honeypot/protocols/` — Protocol bridges such as `TelnetBridge` and `HttpProxyBridge`.
 - `src/honeypot/logger/logger.py` — Loguru setup with per-IP log routing to `/var/log/{ip}.log` (10 MB rotation, 10-day retention, zip compression).
 - `src/honeypot/utils/race_group.py` — `RaceGroup` utility: runs concurrent async tasks and cancels all when the first completes (used for bidirectional relay).
-- `src/honeypot/exc.py` — Custom exceptions.
+- `src/honeypot/core/exc.py` — Custom exceptions (`BackendPropertyError`, `ContainerNotInitializedError`).
 
 **Adding a new protocol:**
 1. Implement a `Backend` subclass (or reuse `ContainerBackend`/`StreamBackend`).
