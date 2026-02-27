@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "Honeypot"
-descriptipn = "Honeypot"
+description = "Honeypot"
 dynamic = ["version"]
 requires-python = ">=3.14"
 dependencies = [
@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
+    "pytest",
     "pytest-asyncio",
     "pytest-mock"
 ]

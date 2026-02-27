@@ -17,7 +17,9 @@ async def _cancel_tasks(
     for task in tasks:
         try:
             await task
-        except BaseException:
+        except asyncio.CancelledError:
+            pass
+        except Exception:
             pass
 
 

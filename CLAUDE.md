@@ -48,11 +48,11 @@ Client → Bridge (TelnetBridge / HttpProxyBridge)
 **Key components:**
 
 - `src/main.py` — Entry point. Configures hosts/ports, starts async servers for Telnet (port 2323) and HTTP proxy (port 8080).
-- `src/honeypot/backend.py` — Abstract async context manager `Backend` with `read()`/`write()` interface.
-- `src/honeypot/bridge.py` — Abstract `SessionBridge` base. Manages the bidirectional data relay and per-IP logging.
-- `src/honeypot/builder.py` — `BackendBuilder` factory for constructing `ContainerBackend` or `StreamBackend`.
-- `src/honeypot/containers/` — Docker-based backend: `ContainerWrapper` handles container lifecycle; `TelnetBridge` emulates a login prompt via a container.
-- `src/honeypot/proxy/` — TCP proxy backend: `StreamBackend` connects to a remote host; `HttpProxyBridge` forwards HTTP requests to the real IoT device.
+- `src/honeypot/core/backend.py` — Abstract async context manager `Backend` with `read()`/`write()` interface.
+- `src/honeypot/core/bridge.py` — Abstract `SessionBridge` base. Manages the bidirectional data relay and per-IP logging.
+- `src/honeypot/core/builder.py` — `BackendBuilder` factory for constructing `ContainerBackend` or `StreamBackend`.
+- `src/honeypot/backends/` — Docker/TCP backends, including `ContainerWrapper`, `ContainerBackend`, and `StreamBackend`.
+- `src/honeypot/protocols/` — Protocol bridges such as `TelnetBridge` and `HttpProxyBridge`.
 - `src/honeypot/logger/logger.py` — Loguru setup with per-IP log routing to `/var/log/{ip}.log` (10 MB rotation, 10-day retention, zip compression).
 - `src/honeypot/utils/race_group.py` — `RaceGroup` utility: runs concurrent async tasks and cancels all when the first completes (used for bidirectional relay).
 - `src/honeypot/exc.py` — Custom exceptions.
