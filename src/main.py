@@ -9,7 +9,6 @@ from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
 from honeypot.logger.logger import resolve_log_dir, setup_logging
 from honeypot.protocols.http_proxy import HttpProxyBridge
 
-docker_client = docker.from_env()
 IOT_HOST = "192.168.1.1"
 IOT_HTTP_PORT = 80
 HTTP_PORT = 8080
@@ -18,6 +17,7 @@ TELNET_PORT = 2323
 
 async def start_server():
     setup_logging(resolve_log_dir())
+    docker_client = docker.from_env()
     builder = BackendBuilder(docker_client, LOCAL_RESOURCES_DIR)
     telnet_bridge = TelnetBridge(backend=builder.container("telnet"))
     http_bridge = HttpProxyBridge(backend=builder.proxy(IOT_HOST, IOT_HTTP_PORT))
