@@ -1,21 +1,41 @@
 import logging
+import os
 import sys
 from pathlib import Path
-from loguru import logger
+from types import FrameType
+from typing import override
 
-LOG_DIR = Path("/var/log/")
-LOG_DIR.mkdir(exist_ok=True)
+from loguru import Message, logger
+
+
+def resolve_log_dir() -> Path:
+    xdg_state = os.environ.get("XDG_STATE_HOME")
+    fallback = (
+        Path(xdg_state) / "chameleon"
+        if xdg_state
+        else Path.home() / ".local" / "state" / "chameleon"
+    )
+    for candidate in (Path("/var/log"), fallback):
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            continue
+        if os.access(candidate, os.W_OK):
+            return candidate
+    return fallback
 
 
 class InterceptHandler(logging.Handler):
-    def emit(self, record):
+    @override
+    def emit(self, record: logging.LogRecord) -> None:
         try:
             level = logger.level(record.levelname).name
         except ValueError:
             level = record.levelno
 
-        frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:
+        frame: FrameType | None = logging.currentframe()
+        depth = 2
+        while frame is not None and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
             depth += 1
 
@@ -24,36 +44,37 @@ class InterceptHandler(logging.Handler):
         )
 
 
-def router_sink(message):
-    record = message.record
-    ip = record["extra"].get("ip")
+def setup_logging(log_dir: Path) -> None:
+    def router_sink(message: Message) -> None:
+        record = message.record
+        ip = record["extra"].get("ip")
 
-    if ip:
-        safe_ip = str(ip).replace("/", "_").replace("\\", "_")
-        log_file = LOG_DIR / f"{safe_ip}.log"
+        if ip:
+            safe_ip = str(ip).replace("/", "_").replace("\\", "_")
+            log_file = log_dir / f"{safe_ip}.log"
 
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(message)
+            with open(log_file, "a", encoding="utf-8") as f:
+                _ = f.write(message)
 
-
-def setup_logging():
     logging.root.handlers = [InterceptHandler()]
     logging.root.setLevel(logging.INFO)
 
     logger.remove()
 
-    logger.add(
+    _ = logger.add(
         sys.stderr,
         level="INFO",
-        format="<green>{time:HH:mm:ss}</green> | "
-               "<level>{level: <8}</level> | "
-               "<cyan>{name}</cyan>:<cyan>{function}</cyan> - "
-               "<level>{message}</level>",
+        format=(
+            "<green>{time:HH:mm:ss}</green> | "
+            + "<level>{level: <8}</level> | "
+            + "<cyan>{name}</cyan>:<cyan>{function}</cyan> - "
+            + "<level>{message}</level>"
+        ),
         colorize=True
     )
 
-    logger.add(
-        f"{LOG_DIR}/honeypot.log",
+    _ = logger.add(
+        log_dir / "honeypot.log",
         rotation="10 MB",
         retention="10 days",
         level="DEBUG",
@@ -61,7 +82,7 @@ def setup_logging():
         enqueue=True
     )
 
-    logger.add(
+    _ = logger.add(
         router_sink,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
         filter=lambda r: "ip" in r["extra"],  # specific log file for connected ip

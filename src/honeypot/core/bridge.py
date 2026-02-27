@@ -3,7 +3,7 @@ from asyncio import StreamReader, StreamWriter
 
 from loguru import logger
 
-from honeypot.backend import Backend
+from honeypot.core.backend import Backend
 from honeypot.utils import RaceGroup
 
 READ_BUFFER_SIZE = 4096
@@ -20,14 +20,18 @@ class SessionBridge(ABC):
     def name(self) -> str:
         pass
 
+    async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
+        pass
+
     @abstractmethod
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
         pass
 
     async def handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
-        ip: str = writer.get_extra_info("peername")[0] or "UNKNOWN"
+        peername = writer.get_extra_info("peername")
+        ip: str = peername[0] if peername else "UNKNOWN"
         with logger.contextualize(ip=ip, bridge=self.name):
-            logger.info("[+] New containers detected")
+            logger.info("[+] New client detected")
             try:
                 await self._handle_client(reader, writer)
             except (OSError, EOFError) as e:

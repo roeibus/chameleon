@@ -8,8 +8,8 @@ from docker.errors import APIError, ImageNotFound, NotFound
 from docker.models.containers import Container
 from loguru import logger
 
-from honeypot.containers.config import ContainerConfig
-from honeypot.exc import ContainerNotInitializedError
+from honeypot.backends.container_config import ContainerConfig
+from honeypot.core.exc import ContainerNotInitializedError
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOCAL_RESOURCES_DIR = BASE_DIR / "resources"
@@ -38,7 +38,7 @@ class ContainerWrapper[Config: ContainerConfig = ContainerConfig]:
 
     def attach_socket(self, **kwargs: dict[str, int]) -> socket:
         sock_obj = self.inner_container.attach_socket(**kwargs)
-        return t.cast(socket, sock_obj._sock)  # type: ignore[union-attr]  # pylint: disable=protected-access
+        return t.cast(socket, sock_obj._sock)  # pyright: ignore[reportAttributeAccessIssue]
 
     def setup(self) -> None:
         logger.info("[+] Container Setup was called...")

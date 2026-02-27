@@ -1,9 +1,10 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
 from types import TracebackType
+from typing import override
 
-from honeypot.backend import Backend
-from honeypot.exc import BackendPropertyError
+from honeypot.core.backend import Backend
+from honeypot.core.exc import BackendPropertyError
 
 
 class StreamBackend(Backend):
@@ -25,12 +26,14 @@ class StreamBackend(Backend):
             raise BackendPropertyError("StreamBackend is not connected")
         return self._writer
 
+    @override
     async def __aenter__(self) -> "StreamBackend":
         self._reader, self._writer = await asyncio.open_connection(
             self._host, self._port
         )
         return self
 
+    @override
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
@@ -46,9 +49,11 @@ class StreamBackend(Backend):
         self._reader = None
         self._writer = None
 
+    @override
     async def read(self, size: int) -> bytes:
         return await self.reader.read(size)
 
+    @override
     async def write(self, data: bytes) -> None:
         self.writer.write(data)
         await self.writer.drain()

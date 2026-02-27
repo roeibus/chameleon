@@ -3,13 +3,12 @@ import asyncio
 import docker
 from loguru import logger
 
-from honeypot.builder import BackendBuilder
-from honeypot.containers.telnet_bridge import TelnetBridge
-from honeypot.containers.wrapper import LOCAL_RESOURCES_DIR
-from honeypot.logger.logger import setup_logging
-from honeypot.proxy.http_proxy_bridge import HttpProxyBridge
+from honeypot.core.builder import BackendBuilder
+from honeypot.protocols.telnet import TelnetBridge
+from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
+from honeypot.logger.logger import resolve_log_dir, setup_logging
+from honeypot.protocols.http_proxy import HttpProxyBridge
 
-docker_client = docker.from_env()
 IOT_HOST = "192.168.1.1"
 IOT_HTTP_PORT = 80
 HTTP_PORT = 8080
@@ -17,7 +16,8 @@ TELNET_PORT = 2323
 
 
 async def start_server():
-    setup_logging()
+    setup_logging(resolve_log_dir())
+    docker_client = docker.from_env()
     builder = BackendBuilder(docker_client, LOCAL_RESOURCES_DIR)
     telnet_bridge = TelnetBridge(backend=builder.container("telnet"))
     http_bridge = HttpProxyBridge(backend=builder.proxy(IOT_HOST, IOT_HTTP_PORT))
@@ -35,7 +35,10 @@ async def start_server():
     logger.info(f"[*] HTTP Proxy Honeypot listening on {http_addr}")
 
     async with telnet_server, http_server:
-        await asyncio.gather(telnet_server.serve_forever(), http_server.serve_forever())
+        await asyncio.gather(  # pyright: ignore[reportUnusedCallResult]
+            telnet_server.serve_forever(),
+            http_server.serve_forever()
+        )
 
 
 if __name__ == "__main__":

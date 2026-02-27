@@ -4,30 +4,34 @@ build-backend = "hatchling.build"
 
 [project]
 name = "Honeypot"
-descriptipn = "Honeypot"
+description = "Honeypot"
 dynamic = ["version"]
 requires-python = ">=3.14"
 dependencies = [
     "requests",
     "docker",
     "loguru>=0.7.3",
-    "basedpyright>=1.38.1",
-    "ruff>=0.15.2",
 ]
 
 [project.optional-dependencies]
-typing = [
-    "mypy",
-    "types-docker"
-]
-linter = [
-    "pylint"
+dev = [
+    "basedpyright>=1.38.0",
+    "ruff>=0.15.1",
 ]
 test = [
-    "pytest-asyncio"
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock"
 ]
 
 
 [tool.hatch.version]
 path = "VERSION"
 pattern = "(?P<version>\\S+)"
+
+[tool.basedpyright]
+# docker-py and loguru ship incomplete stubs — unknown/Any diagnostics are their fault
+reportAny = "none"
+reportUnknownMemberType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownVariableType = "none"

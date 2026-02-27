@@ -1,52 +1,46 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, call
-from honeypot.containers.telnet_bridge import TelnetBridge
-from honeypot.backend import Backend
-
+from honeypot.protocols.telnet import TelnetBridge
+from honeypot.core.backend import Backend
 
 @pytest.fixture
-def mock_backend():
-    backend = AsyncMock(spec=Backend)
+def mock_backend(mocker):
+    backend = mocker.AsyncMock(spec=Backend)
     backend.__aenter__.return_value = backend
     return backend
-
 
 @pytest.fixture
 def bridge(mock_backend):
     return TelnetBridge(backend=mock_backend)
 
-
 @pytest.fixture
-def mock_reader():
-    reader = AsyncMock()
+def mock_reader(mocker):
+    reader = mocker.AsyncMock()
     reader.readline.side_effect = [b'admin\n', b'password\n']
     return reader
 
-
 @pytest.fixture
-def mock_writer():
-    writer = MagicMock()
-    writer.drain = AsyncMock()
+def mock_writer(mocker):
+    writer = mocker.Mock()
+    writer.drain = mocker.AsyncMock()
     return writer
 
-
 @pytest.mark.asyncio
-async def test_greet_successful_flow(bridge, mock_reader, mock_writer):
+async def test_greet_successful_flow(bridge, mock_reader, mock_writer, mocker):
     await bridge.greet(mock_reader, mock_writer)
 
     expected_calls = [
-        call(b"Ubuntu 20.04 LTS\r\nlogin: "),
-        call(b"Password: "),
-        call(b"\r\nWelcome to Ubuntu.\r\n\r\n")
+        mocker.call(b"Ubuntu 20.04 LTS\r\nlogin: "),
+        mocker.call(b"Password: "),
+        mocker.call(b"\r\nWelcome to Ubuntu.\r\n\r\n")
     ]
 
     mock_writer.write.assert_has_calls(expected_calls)
     assert mock_writer.drain.call_count == 3
     assert mock_reader.readline.call_count == 2
 
-
 @pytest.mark.asyncio
-async def test_greet_handles_exception(bridge, mock_reader, mock_writer, caplog):
+async def test_greet_propagates_exception(bridge, mock_reader, mock_writer):
     mock_writer.write.side_effect = OSError("Network failure")
 
-    await bridge.greet(mock_reader, mock_writer)
+    with pytest.raises(OSError, match="Network failure"):
+        await bridge.greet(mock_reader, mock_writer)

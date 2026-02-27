@@ -8,6 +8,4 @@ __pycache__/
 .env
 .DS_Store
 Thumbs.db
-*uv*
-CLAUDE.md
-settings.local.json
+uv.lock

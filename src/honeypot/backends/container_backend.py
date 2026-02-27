@@ -3,9 +3,9 @@ from socket import socket
 from types import TracebackType
 from typing import override
 
-from honeypot.backend import Backend
-from honeypot.containers.wrapper import ContainerWrapper
-from honeypot.exc import BackendPropertyError
+from honeypot.core.backend import Backend
+from honeypot.backends.container_wrapper import ContainerWrapper
+from honeypot.core.exc import BackendPropertyError
 
 
 class ContainerBackend(Backend):
@@ -25,9 +25,13 @@ class ContainerBackend(Backend):
     @override
     async def __aenter__(self) -> "ContainerBackend":
         await asyncio.to_thread(self._container.setup)
-        raw_sock = self._container.attach_socket(params=self._socket_params)
-        raw_sock.setblocking(False)
-        self._sock = raw_sock
+        try:
+            raw_sock = self._container.attach_socket(params=self._socket_params)
+            raw_sock.setblocking(False)
+            self._sock = raw_sock
+        except BaseException:
+            await asyncio.to_thread(self._container.teardown)
+            raise
         return self
 
     @override
