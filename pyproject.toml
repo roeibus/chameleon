@@ -11,11 +11,13 @@ dependencies = [
     "requests",
     "docker",
     "loguru>=0.7.3",
-    "basedpyright>=1.38.1",
-    "ruff>=0.15.2",
 ]
 
 [project.optional-dependencies]
+dev = [
+    "basedpyright>=1.38.0",
+    "ruff>=0.15.1",
+]
 test = [
     "pytest",
     "pytest-asyncio",
