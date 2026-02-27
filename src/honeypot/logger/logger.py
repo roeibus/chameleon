@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 from types import FrameType
@@ -6,8 +7,22 @@ from typing import override
 
 from loguru import Message, logger
 
-LOG_DIR = Path("/var/log/")
-LOG_DIR.mkdir(exist_ok=True)
+
+def resolve_log_dir() -> Path:
+    xdg_state = os.environ.get("XDG_STATE_HOME")
+    fallback = (
+        Path(xdg_state) / "chameleon"
+        if xdg_state
+        else Path.home() / ".local" / "state" / "chameleon"
+    )
+    for candidate in (Path("/var/log"), fallback):
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            continue
+        if os.access(candidate, os.W_OK):
+            return candidate
+    return fallback
 
 
 class InterceptHandler(logging.Handler):
@@ -29,19 +44,18 @@ class InterceptHandler(logging.Handler):
         )
 
 
-def router_sink(message: Message) -> None:
-    record = message.record
-    ip = record["extra"].get("ip")
+def setup_logging(log_dir: Path) -> None:
+    def router_sink(message: Message) -> None:
+        record = message.record
+        ip = record["extra"].get("ip")
 
-    if ip:
-        safe_ip = str(ip).replace("/", "_").replace("\\", "_")
-        log_file = LOG_DIR / f"{safe_ip}.log"
+        if ip:
+            safe_ip = str(ip).replace("/", "_").replace("\\", "_")
+            log_file = log_dir / f"{safe_ip}.log"
 
-        with open(log_file, "a", encoding="utf-8") as f:
-            _ = f.write(message)
+            with open(log_file, "a", encoding="utf-8") as f:
+                _ = f.write(message)
 
-
-def setup_logging():
     logging.root.handlers = [InterceptHandler()]
     logging.root.setLevel(logging.INFO)
 
@@ -60,7 +74,7 @@ def setup_logging():
     )
 
     _ = logger.add(
-        f"{LOG_DIR}/honeypot.log",
+        log_dir / "honeypot.log",
         rotation="10 MB",
         retention="10 days",
         level="DEBUG",

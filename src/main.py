@@ -6,7 +6,7 @@ from loguru import logger
 from honeypot.core.builder import BackendBuilder
 from honeypot.protocols.telnet import TelnetBridge
 from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
-from honeypot.logger.logger import setup_logging
+from honeypot.logger.logger import resolve_log_dir, setup_logging
 from honeypot.protocols.http_proxy import HttpProxyBridge
 
 docker_client = docker.from_env()
@@ -17,7 +17,7 @@ TELNET_PORT = 2323
 
 
 async def start_server():
-    setup_logging()
+    setup_logging(resolve_log_dir())
     builder = BackendBuilder(docker_client, LOCAL_RESOURCES_DIR)
     telnet_bridge = TelnetBridge(backend=builder.container("telnet"))
     http_bridge = HttpProxyBridge(backend=builder.proxy(IOT_HOST, IOT_HTTP_PORT))
