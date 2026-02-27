@@ -12,7 +12,7 @@ jobs:
         with:
           python-version: '3.14'
       - run: pip install uv
-      - run: uv sync
+      - run: uv sync --extra dev
       - run: uv run ruff check src/
 
   basedpyright:
@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.14'
       - run: pip install uv
-      - run: uv sync
+      - run: uv sync --extra dev
       - run: uv run basedpyright src/
 
   test:
