@@ -3,6 +3,7 @@ import asyncio
 import docker
 from loguru import logger
 
+from honeypot.config import Settings
 from honeypot.core.builder import BackendBuilder
 from honeypot.protocols.telnet import TelnetBridge
 from honeypot.protocols.ssh import SshBridge
@@ -10,29 +11,32 @@ from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
 from honeypot.logger.logger import resolve_log_dir, setup_logging
 from honeypot.protocols.http_proxy import HttpProxyBridge
 
-IOT_HOST = "192.168.1.1"
-IOT_HTTP_PORT = 80
-HTTP_PORT = 8080
-TELNET_PORT = 23
-SSH_PORT = 22
-
 
 async def start_server():
-    setup_logging(resolve_log_dir())
+    settings = Settings()
+    setup_logging(resolve_log_dir(settings.log_dir))
     docker_client = docker.from_env()
     builder = BackendBuilder(docker_client, LOCAL_RESOURCES_DIR)
     telnet_bridge = TelnetBridge(backend=builder.container("telnet"))
-    http_bridge = HttpProxyBridge(backend=builder.proxy(IOT_HOST, IOT_HTTP_PORT))
+    http_bridge = HttpProxyBridge(
+        backend=builder.proxy(settings.iot_host, settings.iot_http_port)
+    )
     ssh_bridge = SshBridge(backend=builder.container("ssh"))
 
     telnet_server = await asyncio.start_server(
-        telnet_bridge.handle_client, host="0.0.0.0", port=TELNET_PORT
+        telnet_bridge.handle_client,
+        host=settings.bind_host,
+        port=settings.telnet_port,
     )
     http_server = await asyncio.start_server(
-        http_bridge.handle_client, host="0.0.0.0", port=HTTP_PORT
+        http_bridge.handle_client,
+        host=settings.bind_host,
+        port=settings.http_port,
     )
     # asyncssh manages its own listener; starts serving immediately.
-    ssh_server = await ssh_bridge.start_server(port=SSH_PORT)
+    ssh_server = await ssh_bridge.start_server(
+        host=settings.bind_host, port=settings.ssh_port
+    )
 
     telnet_addr = telnet_server.sockets[0].getsockname()
     logger.info(f"[*] Telnet Honeypot listening on {telnet_addr}")

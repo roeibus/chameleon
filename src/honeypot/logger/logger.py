@@ -8,7 +8,16 @@ from typing import override
 from loguru import Message, logger
 
 
-def resolve_log_dir() -> Path:
+def resolve_log_dir(override: Path | None = None) -> Path:
+    if override is not None:
+        try:
+            override.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            pass
+        else:
+            if os.access(override, os.W_OK):
+                return override
+
     xdg_state = os.environ.get("XDG_STATE_HOME")
     fallback = (
         Path(xdg_state) / "chameleon"

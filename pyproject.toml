@@ -12,6 +12,7 @@ dependencies = [
     "docker",
     "loguru>=0.7.3",
     "asyncssh>=2.14.2",
+    "pydantic-settings>=2.0",
 ]
 
 [project.optional-dependencies]
