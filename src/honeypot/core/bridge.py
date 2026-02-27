@@ -3,7 +3,7 @@ from asyncio import StreamReader, StreamWriter
 
 from loguru import logger
 
-from honeypot.backend import Backend
+from honeypot.core.backend import Backend
 from honeypot.utils import RaceGroup
 
 READ_BUFFER_SIZE = 4096

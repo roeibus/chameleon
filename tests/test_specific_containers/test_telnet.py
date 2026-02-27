@@ -1,6 +1,6 @@
 import pytest
-from honeypot.containers.telnet_bridge import TelnetBridge
-from honeypot.backend import Backend
+from honeypot.protocols.telnet import TelnetBridge
+from honeypot.core.backend import Backend
 
 @pytest.fixture
 def mock_backend(mocker):
@@ -42,7 +42,7 @@ async def test_greet_successful_flow(bridge, mock_reader, mock_writer, mocker):
 async def test_greet_handles_exception(bridge, mock_reader, mock_writer, mocker):
     mock_writer.write.side_effect = OSError("Network failure")
     
-    mock_logger_error = mocker.patch("honeypot.containers.telnet_bridge.logger.error")
+    mock_logger_error = mocker.patch("honeypot.protocols.telnet.logger.error")
 
     await bridge.greet(mock_reader, mock_writer)
     

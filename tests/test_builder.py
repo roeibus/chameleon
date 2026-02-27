@@ -2,9 +2,9 @@ from pathlib import Path
 
 import docker
 
-from honeypot.builder import BackendBuilder
-from honeypot.containers.backend import ContainerBackend
-from honeypot.proxy.stream_backend import StreamBackend
+from honeypot.core.builder import BackendBuilder
+from honeypot.backends.container_backend import ContainerBackend
+from honeypot.backends.stream_backend import StreamBackend
 
 def test_builder_creates_stream_backend_for_proxy(mocker):
     mock_client = mocker.Mock(spec=docker.DockerClient)

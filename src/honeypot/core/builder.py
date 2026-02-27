@@ -3,10 +3,10 @@ from pathlib import Path
 import docker
 from docker import DockerClient
 
-from honeypot.containers.backend import ContainerBackend
-from honeypot.containers.config import ContainerConfig
-from honeypot.containers.wrapper import LOCAL_RESOURCES_DIR, ContainerWrapper
-from honeypot.proxy.stream_backend import StreamBackend
+from honeypot.backends.container_backend import ContainerBackend
+from honeypot.backends.container_config import ContainerConfig
+from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR, ContainerWrapper
+from honeypot.backends.stream_backend import StreamBackend
 
 SOCKET_PARAMS = {"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1}
 

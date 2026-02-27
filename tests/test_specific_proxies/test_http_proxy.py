@@ -1,7 +1,7 @@
 import pytest
 
-from honeypot.backend import Backend
-from honeypot.proxy.http_proxy_bridge import HttpProxyBridge
+from honeypot.core.backend import Backend
+from honeypot.protocols.http_proxy import HttpProxyBridge
 
 @pytest.fixture
 def mock_backend(mocker):

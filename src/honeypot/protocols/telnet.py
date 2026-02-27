@@ -4,16 +4,15 @@ from typing import override
 
 from loguru import logger
 
-from honeypot.containers.bridge import ContainerSessionBridge
+from honeypot.core.bridge import SessionBridge
 
 
-class TelnetBridge(ContainerSessionBridge):
+class TelnetBridge(SessionBridge):
     @property
     @override
     def name(self) -> str:
         return "telnet"
 
-    @override
     async def greet(self, reader: StreamReader, writer: StreamWriter) -> None:
         try:
             writer.write(b"Ubuntu 20.04 LTS\r\nlogin: ")
@@ -32,3 +31,9 @@ class TelnetBridge(ContainerSessionBridge):
             await writer.drain()
         except (OSError, EOFError) as e:
             logger.error(f"Connection error: {e}")
+
+    @override
+    async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
+        async with self._backend:
+            await self.greet(reader, writer)
+            await self._forward(reader, writer)

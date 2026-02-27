@@ -3,8 +3,8 @@ from dataclasses import asdict
 import pytest
 from docker.errors import APIError, ImageNotFound
 
-from honeypot.containers.config import ContainerConfig
-from honeypot.containers.wrapper import ContainerWrapper
+from honeypot.backends.container_config import ContainerConfig
+from honeypot.backends.container_wrapper import ContainerWrapper
 
 @pytest.fixture
 def mock_docker_client(mocker):

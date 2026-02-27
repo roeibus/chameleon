@@ -8,6 +8,19 @@ from typing import Any
 # we also need to cancel all tasks if they are successful
 
 
+async def _cancel_tasks(
+        tasks: Iterable[Task[Any]]  # pyright: ignore[reportExplicitAny]
+) -> None:
+    tasks = list(tasks)
+    for task in tasks:
+        _ = task.cancel()
+    for task in tasks:
+        try:
+            await task
+        except BaseException:
+            pass
+
+
 class RaceGroup:
     def __init__(self) -> None:
         self.tasks: list[Task[Any]] = []  # pyright: ignore[reportExplicitAny]
@@ -16,18 +29,6 @@ class RaceGroup:
         self, coro: Coroutine[Any, Any, Any]  # pyright: ignore[reportExplicitAny]
     ) -> None:
         self.tasks.append(asyncio.create_task(coro))
-
-    async def _cancel_tasks(
-        self, tasks: Iterable[Task[Any]]  # pyright: ignore[reportExplicitAny]
-    ) -> None:
-        tasks = list(tasks)
-        for task in tasks:
-            _ = task.cancel()
-        for task in tasks:
-            try:
-                await task
-            except BaseException:
-                pass
 
     async def __aenter__(self) -> "RaceGroup":
         return self
@@ -39,14 +40,14 @@ class RaceGroup:
         exc_tb: TracebackType | None,
     ) -> None:
         if exc_val or not self.tasks:
-            await self._cancel_tasks(self.tasks)
+            await _cancel_tasks(self.tasks)
             return
 
         done, pending = await asyncio.wait(
             self.tasks, return_when=asyncio.FIRST_COMPLETED
         )
 
-        await self._cancel_tasks(pending)
+        await _cancel_tasks(pending)
 
         for task in done:
             if not task.cancelled():

@@ -3,11 +3,11 @@ import asyncio
 import docker
 from loguru import logger
 
-from honeypot.builder import BackendBuilder
-from honeypot.containers.telnet_bridge import TelnetBridge
-from honeypot.containers.wrapper import LOCAL_RESOURCES_DIR
+from honeypot.core.builder import BackendBuilder
+from honeypot.protocols.telnet import TelnetBridge
+from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
 from honeypot.logger.logger import setup_logging
-from honeypot.proxy.http_proxy_bridge import HttpProxyBridge
+from honeypot.protocols.http_proxy import HttpProxyBridge
 
 docker_client = docker.from_env()
 IOT_HOST = "192.168.1.1"
