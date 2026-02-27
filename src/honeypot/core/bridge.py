@@ -20,7 +20,7 @@ class SessionBridge(ABC):
     def name(self) -> str:
         pass
 
-    async def greet(self, reader: StreamReader, writer: StreamWriter) -> None:
+    async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
         pass
 
     @abstractmethod

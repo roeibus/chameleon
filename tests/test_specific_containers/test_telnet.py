@@ -39,12 +39,8 @@ async def test_greet_successful_flow(bridge, mock_reader, mock_writer, mocker):
     assert mock_reader.readline.call_count == 2
 
 @pytest.mark.asyncio
-async def test_greet_handles_exception(bridge, mock_reader, mock_writer, mocker):
+async def test_greet_propagates_exception(bridge, mock_reader, mock_writer):
     mock_writer.write.side_effect = OSError("Network failure")
-    
-    mock_logger_error = mocker.patch("honeypot.protocols.telnet.logger.error")
 
-    await bridge.greet(mock_reader, mock_writer)
-    
-    mock_logger_error.assert_called_once()
-    assert "Connection error: Network failure" in mock_logger_error.call_args[0][0]
+    with pytest.raises(OSError, match="Network failure"):
+        await bridge.greet(mock_reader, mock_writer)
