@@ -170,14 +170,14 @@ async def test_handle_session_calls_process_exit(bridge, mock_backend, mock_proc
 async def test_handle_session_catches_os_error(bridge, mock_backend, mock_process):
     mock_backend.__aenter__.side_effect = OSError("boom")
     await bridge._handle_session(mock_process)
-    mock_process.exit.assert_called_once_with(0)
+    mock_process.exit.assert_called_once_with(1)
 
 
 @pytest.mark.asyncio
 async def test_handle_session_catches_eof_error(bridge, mock_backend, mock_process):
     mock_backend.__aenter__.side_effect = EOFError("eof")
     await bridge._handle_session(mock_process)
-    mock_process.exit.assert_called_once_with(0)
+    mock_process.exit.assert_called_once_with(1)
 
 
 @pytest.mark.asyncio
