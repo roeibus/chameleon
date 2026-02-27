@@ -47,6 +47,7 @@ class SshBridge:
         ip = extract_ip(process)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
             logger.info("[+] New client detected")
+            exit_code = 0
             try:
                 async with self._backend:
                     async with RaceGroup() as rg:
@@ -54,9 +55,10 @@ class SshBridge:
                         rg.create_task(self._forward_output(process))
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
+                exit_code = 1
             finally:
                 logger.info("[-] Connection closed")
-                process.exit(0)
+                process.exit(exit_code)
 
     async def _forward_input(self, process: SSHServerProcess[bytes]) -> None:
         while True:
