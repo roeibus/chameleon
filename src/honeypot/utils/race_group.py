@@ -9,7 +9,7 @@ from typing import Any
 
 
 async def _cancel_tasks(
-        tasks: Iterable[Task[Any]]  # pyright: ignore[reportExplicitAny]
+    tasks: Iterable[Task[Any]],  # pyright: ignore[reportExplicitAny]
 ) -> None:
     tasks = list(tasks)
     for task in tasks:
@@ -28,7 +28,8 @@ class RaceGroup:
         self.tasks: list[Task[Any]] = []  # pyright: ignore[reportExplicitAny]
 
     def create_task(
-        self, coro: Coroutine[Any, Any, Any]  # pyright: ignore[reportExplicitAny]
+        self,
+        coro: Coroutine[Any, Any, Any],  # pyright: ignore[reportExplicitAny]
     ) -> None:
         self.tasks.append(asyncio.create_task(coro))
 

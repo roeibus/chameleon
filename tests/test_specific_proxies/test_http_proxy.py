@@ -10,6 +10,3 @@ def mock_backend(mocker):
 @pytest.fixture
 def bridge(mock_backend):
     return HttpProxyBridge(backend=mock_backend)
-
-def test_name_is_http(bridge):
-    assert bridge.name == "http"

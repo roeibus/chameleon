@@ -8,11 +8,6 @@ from honeypot.core.bridge import SessionBridge
 
 
 class TelnetBridge(SessionBridge):
-    @property
-    @override
-    def name(self) -> str:
-        return "telnet"
-
     @override
     async def greet(self, reader: StreamReader, writer: StreamWriter) -> None:
         writer.write(b"Ubuntu 20.04 LTS\r\nlogin: ")
