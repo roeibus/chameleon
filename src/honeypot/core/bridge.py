@@ -20,6 +20,9 @@ class SessionBridge(ABC):
     def name(self) -> str:
         pass
 
+    async def greet(self, reader: StreamReader, writer: StreamWriter) -> None:
+        pass
+
     @abstractmethod
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
         pass
