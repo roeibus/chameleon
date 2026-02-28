@@ -1,7 +1,15 @@
 from pathlib import Path
 from typing import ClassVar
 
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class DeviceConfig(BaseModel):
+    name: str = ""
+    target_host: str
+    target_port: int = 80
+    listen_port: int
 
 
 class Settings(BaseSettings):
@@ -11,12 +19,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    # Target IoT device
-    iot_host: str = "192.168.1.1"
-    iot_http_port: int = 80
+    # IoT devices to proxy (set via CHAMELEON_DEVICES as JSON)
+    devices: list[DeviceConfig] = []
 
     # Honeypot listen ports
-    http_port: int = 8080
     telnet_port: int = 23
     ssh_port: int = 22
 

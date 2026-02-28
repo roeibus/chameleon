@@ -77,9 +77,7 @@ class SshBridge:
             process.stdout.write(data)
             await process.stdout.drain()
 
-    async def start_server(
-        self, host: str, port: int
-    ) -> asyncssh.SSHAcceptor:
+    async def start_server(self, host: str, port: int) -> asyncssh.SSHAcceptor:
         return await asyncssh.create_server(
             _PasswordAuthServer,
             host,
