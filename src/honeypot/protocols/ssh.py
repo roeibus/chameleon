@@ -1,3 +1,4 @@
+from contextlib import AsyncExitStack
 from typing import override
 
 import asyncssh
@@ -5,7 +6,12 @@ from asyncssh import SSHServer, SSHServerConnection, SSHServerProcess, SSHKey
 from loguru import logger
 
 from honeypot.core.backend import Backend
-from honeypot.core.bridge import MAX_OUTPUT_LOG, READ_BUFFER_SIZE, RECV_BUFFER_SIZE
+from honeypot.core.bridge import (
+    MAX_OUTPUT_LOG,
+    READ_BUFFER_SIZE,
+    RECV_BUFFER_SIZE,
+    ProtocolServer,
+)
 from honeypot.utils import RaceGroup, extract_ip
 
 """
@@ -38,9 +44,9 @@ class _PasswordAuthServer(SSHServer):
         return True
 
 
-class SshBridge:
-    def __init__(self, backend: Backend) -> None:
-        self._backend: Backend = backend
+class SshBridge(ProtocolServer):
+    def __init__(self, backend: Backend, host: str, port: int) -> None:
+        super().__init__(backend, host, port)
         self._host_key: SSHKey = asyncssh.generate_private_key("ssh-rsa")
 
     async def _handle_session(self, process: SSHServerProcess[bytes]) -> None:
@@ -77,12 +83,18 @@ class SshBridge:
             process.stdout.write(data)
             await process.stdout.drain()
 
-    async def start_server(self, host: str, port: int) -> asyncssh.SSHAcceptor:
-        return await asyncssh.create_server(
+    @override
+    async def start(self, stack: AsyncExitStack) -> None:
+        ssh_server = await asyncssh.create_server(
             _PasswordAuthServer,
-            host,
-            port,
+            self._host,
+            self._port,
             server_host_keys=[self._host_key],
             process_factory=self._handle_session,
             encoding=None,
         )
+        # LIFO: wait_closed runs before close (push_async_callback is LIFO)
+        stack.push_async_callback(ssh_server.wait_closed)
+        stack.callback(ssh_server.close)
+        logger.info(f"[*] SSH listening on {ssh_server.get_addresses()}")
+        return None  # asyncssh manages its own serve loop

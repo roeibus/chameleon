@@ -11,7 +11,7 @@ from loguru import Message, logger
 def _is_writable_dir(path: Path) -> bool:
     try:
         path.mkdir(parents=True, exist_ok=True)
-    except PermissionError, OSError:
+    except (PermissionError, OSError):
         return False
     return os.access(path, os.W_OK)
 

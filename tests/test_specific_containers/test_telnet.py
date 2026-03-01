@@ -10,7 +10,7 @@ def mock_backend(mocker):
 
 @pytest.fixture
 def bridge(mock_backend):
-    return TelnetBridge(backend=mock_backend)
+    return TelnetBridge(backend=mock_backend, host="127.0.0.1", port=0)
 
 @pytest.fixture
 def mock_reader(mocker):

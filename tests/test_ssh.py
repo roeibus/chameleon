@@ -56,7 +56,7 @@ def mock_backend(mocker):
 
 @pytest.fixture
 def bridge(mock_backend):
-    return SshBridge(backend=mock_backend)
+    return SshBridge(backend=mock_backend, host="127.0.0.1", port=0)
 
 
 @pytest.fixture
@@ -199,3 +199,27 @@ async def test_handle_session_full_data_flow(bridge, mock_backend, mock_process)
 
     mock_backend.write.assert_awaited_with(b"id\n")
     mock_process.stdout.write.assert_called_with(b"uid=0(root)")
+
+
+@pytest.mark.asyncio
+async def test_start_server(bridge, mocker):
+    mock_ssh_server = mocker.Mock()
+    mock_ssh_server.get_addresses.return_value = [("127.0.0.1", 2222)]
+    
+    mock_create_server = mocker.patch(
+        "asyncssh.create_server", new_callable=mocker.AsyncMock
+    )
+    mock_create_server.return_value = mock_ssh_server
+    
+    stack = mocker.Mock()
+    
+    result = await bridge.start(stack)
+    
+    assert result is None
+    mock_create_server.assert_awaited_once()
+    kwargs = mock_create_server.call_args.kwargs
+    assert kwargs["server_host_keys"] == [bridge._host_key]
+    assert kwargs["process_factory"] == bridge._handle_session
+    
+    stack.push_async_callback.assert_called_once_with(mock_ssh_server.wait_closed)
+    stack.callback.assert_called_once_with(mock_ssh_server.close)

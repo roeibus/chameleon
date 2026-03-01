@@ -1,5 +1,8 @@
+import asyncio
 from abc import ABC, abstractmethod
 from asyncio import StreamReader, StreamWriter
+from contextlib import AsyncExitStack
+from typing import override
 
 from loguru import logger
 
@@ -11,10 +14,17 @@ RECV_BUFFER_SIZE = 4096
 MAX_OUTPUT_LOG = 100
 
 
-class SessionBridge(ABC):
-    def __init__(self, backend: Backend) -> None:
+class ProtocolServer(ABC):
+    def __init__(self, backend: Backend, host: str, port: int) -> None:
         self._backend: Backend = backend
+        self._host: str = host
+        self._port: int = port
 
+    @abstractmethod
+    async def start(self, stack: AsyncExitStack) -> asyncio.Server | None: ...
+
+
+class SessionBridge(ProtocolServer, ABC):
     async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
         pass
 
@@ -37,6 +47,14 @@ class SessionBridge(ABC):
                     await writer.wait_closed()
                 except OSError:
                     pass
+
+    @override
+    async def start(self, stack: AsyncExitStack) -> asyncio.Server:
+        server = await asyncio.start_server(self.handle_client, self._host, self._port)
+        await stack.enter_async_context(server)
+        addr = server.sockets[0].getsockname()
+        logger.info(f"[*] {self.__class__.__name__} listening on {addr}")
+        return server
 
     async def _forward(self, reader: StreamReader, writer: StreamWriter) -> None:
         async with RaceGroup() as rg:

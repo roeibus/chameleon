@@ -1,15 +1,32 @@
+from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class DeviceConfig(BaseModel):
-    name: str = ""
+class Protocol(StrEnum):
+    TELNET = "telnet"
+    SSH = "ssh"
+    HTTP_PROXY = "http_proxy"
+
+
+class ServiceConfig(BaseModel):
+    """
+    Base service config — covers any protocol with no extra fields (Telnet, SSH, ...).
+    """
+
+    protocol: Protocol
+    listen_port: int
+
+
+class HttpProxyConfig(ServiceConfig):
+    """Extends ServiceConfig with proxy-target fields."""
+
     target_host: str
     target_port: int = 80
-    listen_port: int
+    name: str = ""
 
 
 class Settings(BaseSettings):
@@ -19,15 +36,22 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    # IoT devices to proxy (set via CHAMELEON_DEVICES as JSON)
-    devices: list[DeviceConfig] = []
-
-    # Honeypot listen ports
-    telnet_port: int = 23
-    ssh_port: int = 22
-
-    # Bind address for all servers
+    container_services: list[ServiceConfig] = [
+        ServiceConfig(protocol=Protocol.TELNET, listen_port=23),
+        ServiceConfig(protocol=Protocol.SSH, listen_port=22),
+    ]
+    proxy_services: list[HttpProxyConfig] = []
     bind_host: str = "0.0.0.0"
-
-    # Log directory (None = auto-resolve via resolve_log_dir)
     log_dir: Path | None = None
+
+    @model_validator(mode="after")
+    def validate_unique_ports(self) -> "Settings":
+        seen: dict[int, str] = {}
+        for svc in [*self.container_services, *self.proxy_services]:
+            if svc.listen_port in seen:
+                raise ValueError(
+                    f"Port {svc.listen_port} conflicts: "
+                    + f"'{seen[svc.listen_port]}' and '{svc.protocol}'"
+                )
+            seen[svc.listen_port] = svc.protocol
+        return self
