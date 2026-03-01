@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import ClassVar
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from honeypot.config.protocol import Protocol
@@ -25,11 +25,14 @@ class Settings(BaseSettings):
     
     enable_metrics: bool = True
     metrics_host: str = "127.0.0.1"
-    metrics_port: int = 9090
+    metrics_port: int = Field(default=9090, ge=1, le=65535)
 
     @model_validator(mode="after")
     def validate_unique_ports(self) -> "Settings":
         seen: dict[int, str] = {}
+        if self.enable_metrics:
+            seen[self.metrics_port] = "metrics"
+
         for svc in [*self.container_services, *self.proxy_services]:
             if svc.listen_port in seen:
                 raise ValueError(
