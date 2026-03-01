@@ -42,7 +42,9 @@ def test_setup_runs_container_successfully(
 
     mock_docker_client.containers.run.assert_called_once()
 
-    expected_kwargs = asdict(honeypot.config)
+    expected_kwargs = {
+        k: v for k, v in asdict(honeypot.config).items() if v is not None
+    }
     mock_docker_client.containers.run.assert_called_with(**expected_kwargs)
 
     assert honeypot._inner_container == mock_container_obj
@@ -88,3 +90,43 @@ def test_attach_socket_delegation(honeypot, mock_container_obj):
     params = {"stdin": 1, "stream": 1}
     honeypot.attach_socket(**params)
     mock_container_obj.attach_socket.assert_called_once_with(**params)
+
+
+def test_setup_strips_none_fields(mock_docker_client, mock_container_obj):
+    """None resource-limit fields must not be passed to Docker."""
+    config = ContainerConfig(image="test:latest")
+    wrapper = ContainerWrapper(
+        client=mock_docker_client, config=config, context_path="/tmp/fake"
+    )
+    mock_docker_client.containers.run.return_value = mock_container_obj
+
+    wrapper.setup()
+
+    call_kwargs = mock_docker_client.containers.run.call_args[1]
+    assert "mem_limit" not in call_kwargs
+    assert "cpu_period" not in call_kwargs
+    assert "cpu_quota" not in call_kwargs
+    assert "pids_limit" not in call_kwargs
+
+
+def test_setup_passes_resource_limits(mock_docker_client, mock_container_obj):
+    """Explicit resource limits must reach the Docker API call."""
+    config = ContainerConfig(
+        image="test:latest",
+        mem_limit="256m",
+        cpu_period=100000,
+        cpu_quota=50000,
+        pids_limit=32,
+    )
+    wrapper = ContainerWrapper(
+        client=mock_docker_client, config=config, context_path="/tmp/fake"
+    )
+    mock_docker_client.containers.run.return_value = mock_container_obj
+
+    wrapper.setup()
+
+    call_kwargs = mock_docker_client.containers.run.call_args[1]
+    assert call_kwargs["mem_limit"] == "256m"
+    assert call_kwargs["cpu_period"] == 100000
+    assert call_kwargs["cpu_quota"] == 50000
+    assert call_kwargs["pids_limit"] == 32

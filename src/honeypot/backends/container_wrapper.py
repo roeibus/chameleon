@@ -44,7 +44,8 @@ class ContainerWrapper[Config: ContainerConfig = ContainerConfig]:
         logger.info("[+] Container Setup was called...")
         self._build_image()
         logger.info(f"[*] Spawning container from {self.config.image}...")
-        self._inner_container = self._client.containers.run(**asdict(self.config))
+        params = {k: v for k, v in asdict(self.config).items() if v is not None}
+        self._inner_container = self._client.containers.run(**params)
         logger.info(
             f"[+] Container {self.inner_container.short_id} spawned successfully."
         )

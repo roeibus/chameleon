@@ -19,6 +19,10 @@ class ContainerServiceConfig(ServiceConfig):
     """
 
     protocol: Literal[Protocol.TELNET, Protocol.SSH]
+    mem_limit: str = "128m"
+    cpu_period: int = 100000
+    cpu_quota: int = 50000
+    pids_limit: int = 64
 
 
 class HttpProxyConfig(ServiceConfig):
