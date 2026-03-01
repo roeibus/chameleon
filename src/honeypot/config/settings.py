@@ -16,12 +16,16 @@ class Settings(BaseSettings):
     )
 
     container_services: list[ContainerServiceConfig] = [
-        ContainerServiceConfig(protocol=Protocol.TELNET, listen_port=23),
-        ContainerServiceConfig(protocol=Protocol.SSH, listen_port=22),
+        ContainerServiceConfig(protocol=Protocol.TELNET, listen_port=2323),
+        ContainerServiceConfig(protocol=Protocol.SSH, listen_port=2222),
     ]
     proxy_services: list[HttpProxyConfig] = []
     bind_host: str = "0.0.0.0"
     log_dir: Path | None = None
+    
+    enable_metrics: bool = True
+    metrics_host: str = "127.0.0.1"
+    metrics_port: int = 9090
 
     @model_validator(mode="after")
     def validate_unique_ports(self) -> "Settings":

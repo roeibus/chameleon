@@ -3,9 +3,12 @@ import os
 import sys
 from pathlib import Path
 from types import FrameType
-from typing import override
+from typing import override, TYPE_CHECKING
 
-from loguru import Message, logger
+from loguru import logger
+
+if TYPE_CHECKING:
+    from loguru import Message
 
 
 def _is_writable_dir(path: Path) -> bool:

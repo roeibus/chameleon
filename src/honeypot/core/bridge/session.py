@@ -13,10 +13,15 @@ from honeypot.core.bridge.base import (
     RECV_BUFFER_SIZE,
     ProtocolServer,
 )
+from honeypot.core.metrics import MetricsManager
 from honeypot.utils import RaceGroup, extract_ip
 
 
 class SessionBridge(ProtocolServer, ABC):
+    @property
+    def _protocol_name(self) -> str:
+        return self.__class__.__name__.lower()
+        
     async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
         pass
 
@@ -28,12 +33,14 @@ class SessionBridge(ProtocolServer, ABC):
         ip = extract_ip(writer)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
             logger.info("[+] New client detected")
+            MetricsManager.record_connection(self._protocol_name)
             try:
                 await self._handle_client(reader, writer)
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
             finally:
                 logger.info("[-] Connection closed")
+                MetricsManager.record_disconnection(self._protocol_name)
                 writer.close()
                 try:
                     await writer.wait_closed()
@@ -61,6 +68,7 @@ class SessionBridge(ProtocolServer, ABC):
             if not data:
                 break
             logger.info(f"CMD: {data.decode(errors='replace').strip() or repr(data)}")
+            MetricsManager.record_bytes(self._protocol_name, "tx", len(data))
             await backend.write(data)
 
     async def forward_output(self, writer: StreamWriter, backend: Backend) -> None:
@@ -69,5 +77,6 @@ class SessionBridge(ProtocolServer, ABC):
             if not data:
                 break
             logger.debug(f"Output: {data.decode(errors='replace')[:MAX_OUTPUT_LOG]}")
+            MetricsManager.record_bytes(self._protocol_name, "rx", len(data))
             writer.write(data)
             await writer.drain()
