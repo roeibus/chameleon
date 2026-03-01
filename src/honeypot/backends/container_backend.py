@@ -5,15 +5,16 @@ from typing import override
 
 from honeypot.backends.container_wrapper import ContainerWrapper
 from honeypot.core.backend import Backend
-from honeypot.core.exc import BackendPropertyError
+from honeypot.core.exceptions import BackendPropertyError
+
+SOCKET_PARAMS = {"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1}
 
 
 class ContainerBackend(Backend):
     def __init__(
-        self, container: ContainerWrapper, socket_params: dict[str, int]
+        self, container: ContainerWrapper
     ) -> None:
         self._container: ContainerWrapper = container
-        self._socket_params: dict[str, int] = socket_params
         self._sock: socket | None = None
 
     @property
@@ -26,7 +27,7 @@ class ContainerBackend(Backend):
     async def __aenter__(self) -> "ContainerBackend":
         await asyncio.to_thread(self._container.setup)
         try:
-            raw_sock = self._container.attach_socket(params=self._socket_params)
+            raw_sock = self._container.attach_socket(params=SOCKET_PARAMS)
             raw_sock.setblocking(False)
             self._sock = raw_sock
         except BaseException:

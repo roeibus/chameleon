@@ -3,7 +3,7 @@ from types import TracebackType
 
 
 class Backend(ABC):
-    """Reentrant: __aenter__ opens a connection, __aexit__ closes it."""
+    """Async context manager that owns a single connection."""
 
     @abstractmethod
     async def __aenter__(self) -> "Backend": ...

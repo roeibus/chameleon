@@ -4,7 +4,7 @@ from types import TracebackType
 from typing import override
 
 from honeypot.core.backend import Backend
-from honeypot.core.exc import BackendPropertyError
+from honeypot.core.exceptions import BackendPropertyError
 
 
 class StreamBackend(Backend):

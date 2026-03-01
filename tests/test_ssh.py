@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 
-from honeypot.core.backend import Backend
+from honeypot.core.backend import Backend, BackendFactory
 from honeypot.protocols.ssh import SshBridge, _PasswordAuthServer
 
 
@@ -55,8 +55,15 @@ def mock_backend(mocker):
 
 
 @pytest.fixture
-def bridge(mock_backend):
-    return SshBridge(backend=mock_backend, host="127.0.0.1", port=0)
+def mock_factory(mocker, mock_backend):
+    factory = mocker.Mock(spec=BackendFactory)
+    factory.create.return_value = mock_backend
+    return factory
+
+
+@pytest.fixture
+def bridge(mock_factory):
+    return SshBridge(backend_factory=mock_factory, host="127.0.0.1", port=0)
 
 
 @pytest.fixture
@@ -87,7 +94,7 @@ async def test_forward_input_sends_to_backend(bridge, mock_backend, mock_process
     mock_process.stdin.read.side_effect = [b"whoami\n", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_input(mock_process)
+        await bridge._forward_input(mock_process, mock_backend)
 
     mock_backend.write.assert_awaited_with(b"whoami\n")
 
@@ -97,7 +104,7 @@ async def test_forward_input_stops_on_empty(bridge, mock_backend, mock_process):
     mock_process.stdin.read.side_effect = [b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_input(mock_process)
+        await bridge._forward_input(mock_process, mock_backend)
 
     mock_backend.write.assert_not_awaited()
 
@@ -107,7 +114,7 @@ async def test_forward_input_multiple_reads(bridge, mock_backend, mock_process):
     mock_process.stdin.read.side_effect = [b"cmd1\n", b"cmd2\n", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_input(mock_process)
+        await bridge._forward_input(mock_process, mock_backend)
 
     assert mock_backend.write.await_count == 2
 
@@ -120,7 +127,7 @@ async def test_forward_output_writes_to_process(bridge, mock_backend, mock_proce
     mock_backend.read.side_effect = [b"output data", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_output(mock_process)
+        await bridge._forward_output(mock_process, mock_backend)
 
     mock_process.stdout.write.assert_called_with(b"output data")
 
@@ -130,7 +137,7 @@ async def test_forward_output_drains_stdout(bridge, mock_backend, mock_process):
     mock_backend.read.side_effect = [b"data", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_output(mock_process)
+        await bridge._forward_output(mock_process, mock_backend)
 
     mock_process.stdout.drain.assert_awaited()
 
@@ -140,7 +147,7 @@ async def test_forward_output_stops_on_empty(bridge, mock_backend, mock_process)
     mock_backend.read.side_effect = [b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_output(mock_process)
+        await bridge._forward_output(mock_process, mock_backend)
 
     mock_process.stdout.write.assert_not_called()
 

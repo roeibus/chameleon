@@ -1,9 +1,10 @@
-import pytest
 import asyncio
 from asyncio import StreamReader, StreamWriter
 
+import pytest
+
+from honeypot.core.backend import Backend, BackendFactory
 from honeypot.core.bridge import SessionBridge
-from honeypot.core.backend import Backend
 
 
 class DummyBridge(SessionBridge):
@@ -12,8 +13,8 @@ class DummyBridge(SessionBridge):
         return "test_honey"
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
-        async with self._backend:
-            await self._forward(reader, writer)
+        async with self._backend_factory.create() as backend:
+            await self._forward(reader, writer, backend)
 
 
 @pytest.fixture
@@ -25,8 +26,15 @@ def mock_backend(mocker):
 
 
 @pytest.fixture
-def bridge(mock_backend):
-    return DummyBridge(backend=mock_backend, host="127.0.0.1", port=0)
+def mock_factory(mocker, mock_backend):
+    factory = mocker.Mock(spec=BackendFactory)
+    factory.create.return_value = mock_backend
+    return factory
+
+
+@pytest.fixture
+def bridge(mock_factory):
+    return DummyBridge(backend_factory=mock_factory, host="127.0.0.1", port=0)
 
 
 @pytest.fixture
@@ -51,7 +59,7 @@ async def test_forward_input_sends_to_backend(bridge, mock_backend, mock_reader)
     mock_reader.read.side_effect = [b"hello", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_input(mock_reader)
+        await bridge.forward_input(mock_reader, mock_backend)
 
     mock_backend.write.assert_awaited_with(b"hello")
 
@@ -61,7 +69,7 @@ async def test_forward_output_writes_to_client(bridge, mock_backend, mock_writer
     mock_backend.read.side_effect = [b"response", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer)
+        await bridge.forward_output(mock_writer, mock_backend)
 
     mock_writer.write.assert_called_with(b"response")
 
@@ -71,7 +79,7 @@ async def test_forward_output_drains_writer(bridge, mock_backend, mock_writer):
     mock_backend.read.side_effect = [b"response", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer)
+        await bridge.forward_output(mock_writer, mock_backend)
 
     mock_writer.drain.assert_awaited()
 
@@ -118,21 +126,30 @@ async def test_cleanup_on_setup_error(bridge, mock_backend, mock_reader, mock_wr
 
 
 @pytest.mark.asyncio
+async def test_handle_client_creates_backend(
+    bridge, mock_factory, mock_reader, mock_writer, mocker
+):
+    mocker.patch.object(bridge, "_forward", new_callable=mocker.AsyncMock)
+    await bridge._handle_client(mock_reader, mock_writer)
+    mock_factory.create.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_start_server(bridge, mocker):
     mock_server = mocker.Mock(spec=asyncio.Server)
     mock_socket = mocker.Mock()
     mock_socket.getsockname.return_value = ("127.0.0.1", 1234)
     mock_server.sockets = [mock_socket]
-    
+
     mock_start_server = mocker.patch(
         "asyncio.start_server", new_callable=mocker.AsyncMock
     )
     mock_start_server.return_value = mock_server
-    
+
     stack = mocker.AsyncMock()
-    
+
     result = await bridge.start(stack)
-    
+
     assert result is mock_server
     mock_start_server.assert_awaited_once_with(
         bridge.handle_client, bridge._host, bridge._port
