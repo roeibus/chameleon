@@ -2,7 +2,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import ClassVar, Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +17,7 @@ class ServiceConfig(BaseModel):
     Base service config — covers any protocol with no extra fields (Telnet, SSH, ...).
     """
 
-    listen_port: int
+    listen_port: int = Field(ge=1, le=65535)
 
 
 class ContainerServiceConfig(ServiceConfig):
@@ -33,7 +33,7 @@ class HttpProxyConfig(ServiceConfig):
 
     protocol: Literal[Protocol.HTTP_PROXY]
     target_host: str
-    target_port: int = 80
+    target_port: int = Field(default=80, ge=1, le=65535)
     name: str = ""
 
 
