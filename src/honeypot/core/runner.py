@@ -13,4 +13,7 @@ class HoneypotRunner:
             asyncio_servers: list[asyncio.Server] = [
                 s for srv in self._servers if (s := await srv.start(stack)) is not None
             ]
-            await asyncio.gather(*(s.serve_forever() for s in asyncio_servers))
+            if asyncio_servers:
+                await asyncio.gather(*(s.serve_forever() for s in asyncio_servers))
+            else:
+                await asyncio.Event().wait()

@@ -1,6 +1,5 @@
 import asyncio
 
-import docker
 from loguru import logger
 
 from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
@@ -15,7 +14,7 @@ from honeypot.protocols import BRIDGE_CLASSES
 async def start_server() -> None:
     settings = Settings()
     setup_logging(resolve_log_dir(settings.log_dir))
-    builder = BackendBuilder(docker.from_env(), LOCAL_RESOURCES_DIR)
+    builder = BackendBuilder(LOCAL_RESOURCES_DIR)
 
     servers: list[ProtocolServer] = []
     for svc in settings.container_services:

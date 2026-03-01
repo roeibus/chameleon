@@ -37,4 +37,5 @@ reportAny = "none"
 reportUnknownMemberType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownVariableType = "none"
+# Many async library calls return awaitables/results we intentionally discard
 reportUnusedCallResult = "none"

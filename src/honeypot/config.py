@@ -1,6 +1,6 @@
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,13 +17,21 @@ class ServiceConfig(BaseModel):
     Base service config — covers any protocol with no extra fields (Telnet, SSH, ...).
     """
 
-    protocol: Protocol
     listen_port: int
+
+
+class ContainerServiceConfig(ServiceConfig):
+    """
+    Config for container-based services.
+    """
+
+    protocol: Literal[Protocol.TELNET, Protocol.SSH]
 
 
 class HttpProxyConfig(ServiceConfig):
     """Extends ServiceConfig with proxy-target fields."""
 
+    protocol: Literal[Protocol.HTTP_PROXY]
     target_host: str
     target_port: int = 80
     name: str = ""
@@ -36,9 +44,9 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    container_services: list[ServiceConfig] = [
-        ServiceConfig(protocol=Protocol.TELNET, listen_port=23),
-        ServiceConfig(protocol=Protocol.SSH, listen_port=22),
+    container_services: list[ContainerServiceConfig] = [
+        ContainerServiceConfig(protocol=Protocol.TELNET, listen_port=23),
+        ContainerServiceConfig(protocol=Protocol.SSH, listen_port=22),
     ]
     proxy_services: list[HttpProxyConfig] = []
     bind_host: str = "0.0.0.0"
