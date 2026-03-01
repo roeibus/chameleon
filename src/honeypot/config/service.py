@@ -19,6 +19,10 @@ class ContainerServiceConfig(ServiceConfig):
     """
 
     protocol: Literal[Protocol.TELNET, Protocol.SSH]
+    mem_limit: str = Field(default="128m", min_length=2)
+    cpu_period: int = Field(default=100000, ge=1)
+    cpu_quota: int = Field(default=50000, ge=1)
+    pids_limit: int = Field(default=64, ge=1)
 
 
 class HttpProxyConfig(ServiceConfig):

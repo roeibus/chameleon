@@ -23,7 +23,13 @@ async def start_server() -> None:
 
     servers: list[ProtocolServer] = []
     for svc in settings.container_services:
-        factory = builder.container(svc.protocol.value)
+        factory = builder.container(
+            svc.protocol.value,
+            mem_limit=svc.mem_limit,
+            cpu_period=svc.cpu_period,
+            cpu_quota=svc.cpu_quota,
+            pids_limit=svc.pids_limit,
+        )
         bridge_cls = BRIDGE_CLASSES[svc.protocol]
         servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
 

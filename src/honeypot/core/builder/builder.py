@@ -22,8 +22,24 @@ class BackendBuilder:
             self._docker_client = docker.from_env()
         return self._docker_client
 
-    def container(self, name: str = "telnet") -> ContainerBackendFactory:
-        return ContainerBackendFactory(self.docker_client, self._resources_dir, name)
+    def container(
+        self,
+        name: str = "telnet",
+        *,
+        mem_limit: str | None = None,
+        cpu_period: int | None = None,
+        cpu_quota: int | None = None,
+        pids_limit: int | None = None,
+    ) -> ContainerBackendFactory:
+        return ContainerBackendFactory(
+            self.docker_client,
+            self._resources_dir,
+            name,
+            mem_limit=mem_limit,
+            cpu_period=cpu_period,
+            cpu_quota=cpu_quota,
+            pids_limit=pids_limit,
+        )
 
     def proxy(self, host: str, port: int = 80) -> ProxyBackendFactory:
         return ProxyBackendFactory(host, port)
