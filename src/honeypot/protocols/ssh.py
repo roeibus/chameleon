@@ -5,7 +5,7 @@ import asyncssh
 from asyncssh import SSHServer, SSHServerConnection, SSHServerProcess, SSHKey
 from loguru import logger
 
-from honeypot.core.backend import Backend
+from honeypot.core.backend import Backend, BackendFactory
 from honeypot.core.bridge import (
     MAX_OUTPUT_LOG,
     READ_BUFFER_SIZE,
@@ -45,8 +45,8 @@ class _PasswordAuthServer(SSHServer):
 
 
 class SshBridge(ProtocolServer):
-    def __init__(self, backend: Backend, host: str, port: int) -> None:
-        super().__init__(backend, host, port)
+    def __init__(self, backend_factory: BackendFactory, host: str, port: int) -> None:
+        super().__init__(backend_factory, host, port)
         self._host_key: SSHKey = asyncssh.generate_private_key("ssh-rsa")
 
     async def _handle_session(self, process: SSHServerProcess[bytes]) -> None:
@@ -55,10 +55,11 @@ class SshBridge(ProtocolServer):
             logger.info("[+] New client detected")
             exit_code = 0
             try:
-                async with self._backend:
+                backend = self._backend_factory.create()
+                async with backend:
                     async with RaceGroup() as rg:
-                        rg.create_task(self._forward_input(process))
-                        rg.create_task(self._forward_output(process))
+                        rg.create_task(self._forward_input(process, backend))
+                        rg.create_task(self._forward_output(process, backend))
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
                 exit_code = 1
@@ -66,17 +67,21 @@ class SshBridge(ProtocolServer):
                 logger.info("[-] Connection closed")
                 process.exit(exit_code)
 
-    async def _forward_input(self, process: SSHServerProcess[bytes]) -> None:
+    async def _forward_input(
+        self, process: SSHServerProcess[bytes], backend: Backend
+    ) -> None:
         while True:
             data = await process.stdin.read(READ_BUFFER_SIZE)
             if not data:
                 break
             logger.info(f"CMD: {data.decode(errors='replace').strip() or repr(data)}")
-            await self._backend.write(data)
+            await backend.write(data)
 
-    async def _forward_output(self, process: SSHServerProcess[bytes]) -> None:
+    async def _forward_output(
+        self, process: SSHServerProcess[bytes], backend: Backend
+    ) -> None:
         while True:
-            data = await self._backend.read(RECV_BUFFER_SIZE)
+            data = await backend.read(RECV_BUFFER_SIZE)
             if not data:
                 break
             logger.debug(f"Output: {data.decode(errors='replace')[:MAX_OUTPUT_LOG]}")

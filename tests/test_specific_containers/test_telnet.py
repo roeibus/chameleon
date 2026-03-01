@@ -1,6 +1,6 @@
 import pytest
 from honeypot.protocols.telnet import TelnetBridge
-from honeypot.core.backend import Backend
+from honeypot.core.backend import Backend, BackendFactory
 
 @pytest.fixture
 def mock_backend(mocker):
@@ -9,8 +9,14 @@ def mock_backend(mocker):
     return backend
 
 @pytest.fixture
-def bridge(mock_backend):
-    return TelnetBridge(backend=mock_backend, host="127.0.0.1", port=0)
+def mock_factory(mocker, mock_backend):
+    factory = mocker.Mock(spec=BackendFactory)
+    factory.create.return_value = mock_backend
+    return factory
+
+@pytest.fixture
+def bridge(mock_factory):
+    return TelnetBridge(backend_factory=mock_factory, host="127.0.0.1", port=0)
 
 @pytest.fixture
 def mock_reader(mocker):

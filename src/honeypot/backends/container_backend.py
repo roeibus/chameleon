@@ -5,7 +5,7 @@ from typing import override
 
 from honeypot.backends.container_wrapper import ContainerWrapper
 from honeypot.core.backend import Backend
-from honeypot.core.exc import BackendPropertyError
+from honeypot.core.exceptions import BackendPropertyError
 
 
 class ContainerBackend(Backend):

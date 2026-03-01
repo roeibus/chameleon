@@ -3,7 +3,7 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 
 from honeypot.core.bridge import SessionBridge
-from honeypot.core.backend import Backend
+from honeypot.core.backend import Backend, BackendFactory
 
 
 class DummyBridge(SessionBridge):
@@ -12,8 +12,8 @@ class DummyBridge(SessionBridge):
         return "test_honey"
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
-        async with self._backend:
-            await self._forward(reader, writer)
+        async with self._backend_factory.create() as backend:
+            await self._forward(reader, writer, backend)
 
 
 @pytest.fixture
@@ -25,8 +25,15 @@ def mock_backend(mocker):
 
 
 @pytest.fixture
-def bridge(mock_backend):
-    return DummyBridge(backend=mock_backend, host="127.0.0.1", port=0)
+def mock_factory(mocker, mock_backend):
+    factory = mocker.Mock(spec=BackendFactory)
+    factory.create.return_value = mock_backend
+    return factory
+
+
+@pytest.fixture
+def bridge(mock_factory):
+    return DummyBridge(backend_factory=mock_factory, host="127.0.0.1", port=0)
 
 
 @pytest.fixture
@@ -51,7 +58,7 @@ async def test_forward_input_sends_to_backend(bridge, mock_backend, mock_reader)
     mock_reader.read.side_effect = [b"hello", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_input(mock_reader)
+        await bridge.forward_input(mock_reader, mock_backend)
 
     mock_backend.write.assert_awaited_with(b"hello")
 
@@ -61,7 +68,7 @@ async def test_forward_output_writes_to_client(bridge, mock_backend, mock_writer
     mock_backend.read.side_effect = [b"response", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer)
+        await bridge.forward_output(mock_writer, mock_backend)
 
     mock_writer.write.assert_called_with(b"response")
 
@@ -71,7 +78,7 @@ async def test_forward_output_drains_writer(bridge, mock_backend, mock_writer):
     mock_backend.read.side_effect = [b"response", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer)
+        await bridge.forward_output(mock_writer, mock_backend)
 
     mock_writer.drain.assert_awaited()
 

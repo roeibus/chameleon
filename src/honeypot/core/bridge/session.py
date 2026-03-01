@@ -7,21 +7,13 @@ from typing import override
 from loguru import logger
 
 from honeypot.core.backend import Backend
+from honeypot.core.bridge.base import (
+    MAX_OUTPUT_LOG,
+    READ_BUFFER_SIZE,
+    RECV_BUFFER_SIZE,
+    ProtocolServer,
+)
 from honeypot.utils import RaceGroup, extract_ip
-
-READ_BUFFER_SIZE = 4096
-RECV_BUFFER_SIZE = 4096
-MAX_OUTPUT_LOG = 100
-
-
-class ProtocolServer(ABC):
-    def __init__(self, backend: Backend, host: str, port: int) -> None:
-        self._backend: Backend = backend
-        self._host: str = host
-        self._port: int = port
-
-    @abstractmethod
-    async def start(self, stack: AsyncExitStack) -> asyncio.Server | None: ...
 
 
 class SessionBridge(ProtocolServer, ABC):
@@ -56,22 +48,24 @@ class SessionBridge(ProtocolServer, ABC):
         logger.info(f"[*] {self.__class__.__name__} listening on {addr}")
         return server
 
-    async def _forward(self, reader: StreamReader, writer: StreamWriter) -> None:
+    async def _forward(
+        self, reader: StreamReader, writer: StreamWriter, backend: Backend
+    ) -> None:
         async with RaceGroup() as rg:
-            rg.create_task(self.forward_input(reader))
-            rg.create_task(self.forward_output(writer))
+            rg.create_task(self.forward_input(reader, backend))
+            rg.create_task(self.forward_output(writer, backend))
 
-    async def forward_input(self, reader: StreamReader) -> None:
+    async def forward_input(self, reader: StreamReader, backend: Backend) -> None:
         while True:
             data = await reader.read(READ_BUFFER_SIZE)
             if not data:
                 break
             logger.info(f"CMD: {data.decode(errors='replace').strip() or repr(data)}")
-            await self._backend.write(data)
+            await backend.write(data)
 
-    async def forward_output(self, writer: StreamWriter) -> None:
+    async def forward_output(self, writer: StreamWriter, backend: Backend) -> None:
         while True:
-            data = await self._backend.read(RECV_BUFFER_SIZE)
+            data = await backend.read(RECV_BUFFER_SIZE)
             if not data:
                 break
             logger.debug(f"Output: {data.decode(errors='replace')[:MAX_OUTPUT_LOG]}")

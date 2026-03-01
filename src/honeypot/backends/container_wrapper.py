@@ -9,7 +9,7 @@ from docker.models.containers import Container
 from loguru import logger
 
 from honeypot.backends.container_config import ContainerConfig
-from honeypot.core.exc import ContainerNotInitializedError
+from honeypot.core.exceptions import ContainerNotInitializedError
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOCAL_RESOURCES_DIR = BASE_DIR / "resources"

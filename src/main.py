@@ -18,14 +18,14 @@ async def start_server() -> None:
 
     servers: list[ProtocolServer] = []
     for svc in settings.container_services:
-        backend = builder.container(svc.protocol.value)
+        factory = builder.container(svc.protocol.value)
         bridge_cls = BRIDGE_CLASSES[svc.protocol]
-        servers.append(bridge_cls(backend, settings.bind_host, svc.listen_port))
+        servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
 
     for svc in settings.proxy_services:
-        backend = builder.proxy(svc.target_host, svc.target_port)
+        factory = builder.proxy(svc.target_host, svc.target_port)
         bridge_cls = BRIDGE_CLASSES[svc.protocol]
-        servers.append(bridge_cls(backend, settings.bind_host, svc.listen_port))
+        servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
 
     await HoneypotRunner(servers).run()
 
