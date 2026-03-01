@@ -41,5 +41,7 @@ class BackendBuilder:
             pids_limit=pids_limit,
         )
 
-    def proxy(self, host: str, port: int = 80) -> ProxyBackendFactory:
-        return ProxyBackendFactory(host, port)
+    def proxy(
+        self, host: str, port: int = 80, name: str = "http_proxy"
+    ) -> ProxyBackendFactory:
+        return ProxyBackendFactory(host, port, name)

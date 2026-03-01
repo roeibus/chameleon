@@ -5,6 +5,11 @@ from honeypot.core.bridge import SessionBridge
 
 
 class HttpProxyBridge(SessionBridge):
+    @property
+    @override
+    def protocol(self) -> str:
+        return "http_proxy"
+
     @override
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
         backend = self._backend_factory.create()

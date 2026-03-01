@@ -5,12 +5,14 @@ from typing import override
 
 from honeypot.core.backend import Backend
 from honeypot.core.exceptions import BackendPropertyError
+from honeypot.core.metrics import MetricsManager
 
 
 class StreamBackend(Backend):
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, protocol: str = "http_proxy") -> None:
         self._host: str = host
         self._port: int = port
+        self._protocol: str = protocol
         self._reader: StreamReader | None = None
         self._writer: StreamWriter | None = None
 
@@ -28,9 +30,14 @@ class StreamBackend(Backend):
 
     @override
     async def __aenter__(self) -> "StreamBackend":
-        self._reader, self._writer = await asyncio.open_connection(
-            self._host, self._port
-        )
+        try:
+            self._reader, self._writer = await asyncio.open_connection(
+                self._host, self._port
+            )
+            MetricsManager.set_backend_status(self._protocol, "stream", True)
+        except Exception:
+            MetricsManager.set_backend_status(self._protocol, "stream", False)
+            raise
         return self
 
     @override
@@ -40,6 +47,7 @@ class StreamBackend(Backend):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        MetricsManager.set_backend_status(self._protocol, "stream", False)
         if self._writer:
             self._writer.close()
             try:
