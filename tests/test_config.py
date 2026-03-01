@@ -77,3 +77,33 @@ def test_invalid_proxy_config_protocol():
         HttpProxyConfig(
             protocol=Protocol.TELNET, listen_port=8080, target_host="example.com"
         )
+
+
+def test_settings_metrics_port_invalid():
+    with pytest.raises(ValidationError):
+        Settings(metrics_port=70000)
+    with pytest.raises(ValidationError):
+        Settings(metrics_port=0)
+
+
+def test_settings_metrics_port_collision():
+    # SSH is in default container_services with port 2222
+    with pytest.raises(ValidationError, match="Port 2222 conflicts: 'metrics' and 'ssh'"):
+        Settings(
+            container_services=[
+                ContainerServiceConfig(protocol=Protocol.SSH, listen_port=2222)
+            ],
+            metrics_port=2222,
+            enable_metrics=True,
+        )
+
+
+def test_settings_metrics_port_no_collision_if_disabled():
+    # Should not raise
+    Settings(
+        container_services=[
+            ContainerServiceConfig(protocol=Protocol.SSH, listen_port=2222)
+        ],
+        metrics_port=2222,
+        enable_metrics=False,
+    )

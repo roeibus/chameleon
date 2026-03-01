@@ -6,15 +6,17 @@ from typing import override
 from honeypot.backends.container_wrapper import ContainerWrapper
 from honeypot.core.backend import Backend
 from honeypot.core.exceptions import BackendPropertyError
+from honeypot.core.metrics import MetricsManager
 
 SOCKET_PARAMS = {"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1}
 
 
 class ContainerBackend(Backend):
     def __init__(
-        self, container: ContainerWrapper
+        self, container: ContainerWrapper, protocol: str
     ) -> None:
         self._container: ContainerWrapper = container
+        self._protocol: str = protocol
         self._sock: socket | None = None
 
     @property
@@ -30,7 +32,9 @@ class ContainerBackend(Backend):
             raw_sock = self._container.attach_socket(params=SOCKET_PARAMS)
             raw_sock.setblocking(False)
             self._sock = raw_sock
+            MetricsManager.set_backend_status(self._protocol, "docker", True)
         except BaseException:
+            MetricsManager.set_backend_status(self._protocol, "docker", False)
             await asyncio.to_thread(self._container.teardown)
             raise
         return self
@@ -42,6 +46,7 @@ class ContainerBackend(Backend):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        MetricsManager.set_backend_status(self._protocol, "docker", False)
         await asyncio.to_thread(self._container.teardown)
         self._sock = None
 

@@ -15,5 +15,9 @@ class ProtocolServer(ABC):
         self._host: str = host
         self._port: int = port
 
+    @property
+    @abstractmethod
+    def protocol(self) -> str: ...
+
     @abstractmethod
     async def start(self, stack: AsyncExitStack) -> asyncio.Server | None: ...

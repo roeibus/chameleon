@@ -12,6 +12,7 @@ from honeypot.core.bridge import (
     RECV_BUFFER_SIZE,
     ProtocolServer,
 )
+from honeypot.core.metrics import MetricsManager
 from honeypot.utils import RaceGroup, extract_ip
 
 """
@@ -49,10 +50,16 @@ class SshBridge(ProtocolServer):
         super().__init__(backend_factory, host, port)
         self._host_key: SSHKey = asyncssh.generate_private_key("ssh-rsa")
 
+    @property
+    @override
+    def protocol(self) -> str:
+        return "ssh"
+
     async def _handle_session(self, process: SSHServerProcess[bytes]) -> None:
         ip = extract_ip(process)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
             logger.info("[+] New client detected")
+            MetricsManager.record_connection(self.protocol)
             exit_code = 0
             try:
                 backend = self._backend_factory.create()
@@ -65,6 +72,7 @@ class SshBridge(ProtocolServer):
                 exit_code = 1
             finally:
                 logger.info("[-] Connection closed")
+                MetricsManager.record_disconnection(self.protocol)
                 process.exit(exit_code)
 
     async def _forward_input(
@@ -75,6 +83,7 @@ class SshBridge(ProtocolServer):
             if not data:
                 break
             logger.info(f"CMD: {data.decode(errors='replace').strip() or repr(data)}")
+            MetricsManager.record_bytes(self.protocol, "tx", len(data))
             await backend.write(data)
 
     async def _forward_output(
@@ -85,6 +94,7 @@ class SshBridge(ProtocolServer):
             if not data:
                 break
             logger.debug(f"Output: {data.decode(errors='replace')[:MAX_OUTPUT_LOG]}")
+            MetricsManager.record_bytes(self.protocol, "rx", len(data))
             process.stdout.write(data)
             await process.stdout.drain()
 
