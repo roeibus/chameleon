@@ -1,9 +1,10 @@
-import pytest
 import asyncio
 from asyncio import StreamReader, StreamWriter
 
-from honeypot.core.bridge import SessionBridge
+import pytest
+
 from honeypot.core.backend import Backend, BackendFactory
+from honeypot.core.bridge import SessionBridge
 
 
 class DummyBridge(SessionBridge):
@@ -125,21 +126,30 @@ async def test_cleanup_on_setup_error(bridge, mock_backend, mock_reader, mock_wr
 
 
 @pytest.mark.asyncio
+async def test_handle_client_creates_backend(
+    bridge, mock_factory, mock_reader, mock_writer, mocker
+):
+    mocker.patch.object(bridge, "_forward", new_callable=mocker.AsyncMock)
+    await bridge._handle_client(mock_reader, mock_writer)
+    mock_factory.create.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_start_server(bridge, mocker):
     mock_server = mocker.Mock(spec=asyncio.Server)
     mock_socket = mocker.Mock()
     mock_socket.getsockname.return_value = ("127.0.0.1", 1234)
     mock_server.sockets = [mock_socket]
-    
+
     mock_start_server = mocker.patch(
         "asyncio.start_server", new_callable=mocker.AsyncMock
     )
     mock_start_server.return_value = mock_server
-    
+
     stack = mocker.AsyncMock()
-    
+
     result = await bridge.start(stack)
-    
+
     assert result is mock_server
     mock_start_server.assert_awaited_once_with(
         bridge.handle_client, bridge._host, bridge._port

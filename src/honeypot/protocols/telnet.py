@@ -27,7 +27,7 @@ class TelnetBridge(SessionBridge):
 
     @override
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
+        await self.greet(reader, writer)
         backend = self._backend_factory.create()
         async with backend:
-            await self.greet(reader, writer)
             await self._forward(reader, writer, backend)

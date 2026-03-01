@@ -9,8 +9,6 @@ from honeypot.backends.container_wrapper import ContainerWrapper
 from honeypot.backends.stream_backend import StreamBackend
 from honeypot.core.backend import Backend, BackendFactory
 
-SOCKET_PARAMS = {"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1}
-
 
 class ContainerBackendFactory(BackendFactory):
     def __init__(
@@ -26,7 +24,7 @@ class ContainerBackendFactory(BackendFactory):
         wrapper = ContainerWrapper(
             self._docker_client, ContainerConfig(self._name), context
         )
-        return ContainerBackend(wrapper, SOCKET_PARAMS)
+        return ContainerBackend(wrapper)
 
 
 class ProxyBackendFactory(BackendFactory):

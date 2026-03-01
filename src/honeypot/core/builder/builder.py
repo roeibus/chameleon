@@ -23,7 +23,6 @@ class BackendBuilder:
         return self._docker_client
 
     def container(self, name: str = "telnet") -> ContainerBackendFactory:
-        """Creates a factory for ContainerBackend instances."""
         return ContainerBackendFactory(self.docker_client, self._resources_dir, name)
 
     def proxy(self, host: str, port: int = 80) -> ProxyBackendFactory:
