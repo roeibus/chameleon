@@ -26,7 +26,7 @@ def mock_backend(mocker):
 
 @pytest.fixture
 def bridge(mock_backend):
-    return DummyBridge(backend=mock_backend)
+    return DummyBridge(backend=mock_backend, host="127.0.0.1", port=0)
 
 
 @pytest.fixture
@@ -115,3 +115,26 @@ async def test_cleanup_on_setup_error(bridge, mock_backend, mock_reader, mock_wr
     mock_backend.__aenter__.side_effect = OSError("Fail")
     await bridge.handle_client(mock_reader, mock_writer)
     mock_writer.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_start_server(bridge, mocker):
+    mock_server = mocker.Mock(spec=asyncio.Server)
+    mock_socket = mocker.Mock()
+    mock_socket.getsockname.return_value = ("127.0.0.1", 1234)
+    mock_server.sockets = [mock_socket]
+    
+    mock_start_server = mocker.patch(
+        "asyncio.start_server", new_callable=mocker.AsyncMock
+    )
+    mock_start_server.return_value = mock_server
+    
+    stack = mocker.AsyncMock()
+    
+    result = await bridge.start(stack)
+    
+    assert result is mock_server
+    mock_start_server.assert_awaited_once_with(
+        bridge.handle_client, bridge._host, bridge._port
+    )
+    stack.enter_async_context.assert_awaited_once_with(mock_server)

@@ -3,8 +3,8 @@ from socket import socket
 from types import TracebackType
 from typing import override
 
-from honeypot.core.backend import Backend
 from honeypot.backends.container_wrapper import ContainerWrapper
+from honeypot.core.backend import Backend
 from honeypot.core.exc import BackendPropertyError
 
 

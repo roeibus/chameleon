@@ -8,15 +8,17 @@ from typing import override
 from loguru import Message, logger
 
 
-def resolve_log_dir(override: Path | None = None) -> Path:
-    if override is not None:
-        try:
-            override.mkdir(parents=True, exist_ok=True)
-        except (PermissionError, OSError):
-            pass
-        else:
-            if os.access(override, os.W_OK):
-                return override
+def _is_writable_dir(path: Path) -> bool:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except (PermissionError, OSError):
+        return False
+    return os.access(path, os.W_OK)
+
+
+def resolve_log_dir(log_dir: Path | None = None) -> Path:
+    if log_dir is not None and _is_writable_dir(log_dir):
+        return log_dir
 
     xdg_state = os.environ.get("XDG_STATE_HOME")
     fallback = (
@@ -25,11 +27,7 @@ def resolve_log_dir(override: Path | None = None) -> Path:
         else Path.home() / ".local" / "state" / "chameleon"
     )
     for candidate in (Path("/var/log"), fallback):
-        try:
-            candidate.mkdir(parents=True, exist_ok=True)
-        except (PermissionError, OSError):
-            continue
-        if os.access(candidate, os.W_OK):
+        if _is_writable_dir(candidate):
             return candidate
     return fallback
 
@@ -79,7 +77,7 @@ def setup_logging(log_dir: Path) -> None:
             + "<cyan>{name}</cyan>:<cyan>{function}</cyan> - "
             + "<level>{message}</level>"
         ),
-        colorize=True
+        colorize=True,
     )
 
     _ = logger.add(
@@ -88,12 +86,12 @@ def setup_logging(log_dir: Path) -> None:
         retention="10 days",
         level="DEBUG",
         compression="zip",
-        enqueue=True
+        enqueue=True,
     )
 
     _ = logger.add(
         router_sink,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
         filter=lambda r: "ip" in r["extra"],  # specific log file for connected ip
-        enqueue=True
+        enqueue=True,
     )

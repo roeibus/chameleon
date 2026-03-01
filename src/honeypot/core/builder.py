@@ -14,17 +14,23 @@ SOCKET_PARAMS = {"stdin": 1, "stdout": 1, "stderr": 1, "stream": 1}
 class BackendBuilder:
     def __init__(
         self,
-        docker_client: DockerClient | None = None,
         resources_dir: Path | None = None,
+        docker_client: DockerClient | None = None,
     ) -> None:
-        self._docker_client: DockerClient = docker_client or docker.from_env()
+        self._docker_client: DockerClient | None = docker_client
         self._resources_dir: Path = resources_dir or LOCAL_RESOURCES_DIR
+
+    @property
+    def docker_client(self) -> DockerClient:
+        if self._docker_client is None:
+            self._docker_client = docker.from_env()
+        return self._docker_client
 
     def container(self, name: str = "telnet") -> ContainerBackend:
         """Creates a ContainerBackend for the named resource folder."""
         context = str(self._resources_dir / name)
-        c = ContainerWrapper(self._docker_client, ContainerConfig(name), context)
-        return ContainerBackend(c, SOCKET_PARAMS)
+        wrapper = ContainerWrapper(self.docker_client, ContainerConfig(name), context)
+        return ContainerBackend(wrapper, SOCKET_PARAMS)
 
     def proxy(self, host: str, port: int = 80) -> StreamBackend:
         return StreamBackend(host, port)

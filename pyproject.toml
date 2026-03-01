@@ -18,7 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "basedpyright>=1.38.0",
-    "ruff>=0.15.1",
+    "ruff>=0.15.4",
 ]
 test = [
     "pytest",
@@ -37,3 +37,5 @@ reportAny = "none"
 reportUnknownMemberType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownVariableType = "none"
+# Many async library calls return awaitables/results we intentionally discard
+reportUnusedCallResult = "none"
