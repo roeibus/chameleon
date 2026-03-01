@@ -19,9 +19,11 @@ from honeypot.utils import RaceGroup, extract_ip
 
 class SessionBridge(ProtocolServer, ABC):
     @property
-    def _protocol_name(self) -> str:
-        return self.__class__.__name__.lower()
-        
+    @override
+    def protocol(self) -> str:
+        """Returns the protocol name, e.g., 'telnet'."""
+        return self.__class__.__name__.lower().replace("bridge", "")
+
     async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
         pass
 
@@ -33,14 +35,14 @@ class SessionBridge(ProtocolServer, ABC):
         ip = extract_ip(writer)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
             logger.info("[+] New client detected")
-            MetricsManager.record_connection(self._protocol_name)
+            MetricsManager.record_connection(self.protocol)
             try:
                 await self._handle_client(reader, writer)
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
             finally:
                 logger.info("[-] Connection closed")
-                MetricsManager.record_disconnection(self._protocol_name)
+                MetricsManager.record_disconnection(self.protocol)
                 writer.close()
                 try:
                     await writer.wait_closed()
@@ -68,7 +70,7 @@ class SessionBridge(ProtocolServer, ABC):
             if not data:
                 break
             logger.info(f"CMD: {data.decode(errors='replace').strip() or repr(data)}")
-            MetricsManager.record_bytes(self._protocol_name, "tx", len(data))
+            MetricsManager.record_bytes(self.protocol, "tx", len(data))
             await backend.write(data)
 
     async def forward_output(self, writer: StreamWriter, backend: Backend) -> None:
@@ -77,6 +79,6 @@ class SessionBridge(ProtocolServer, ABC):
             if not data:
                 break
             logger.debug(f"Output: {data.decode(errors='replace')[:MAX_OUTPUT_LOG]}")
-            MetricsManager.record_bytes(self._protocol_name, "rx", len(data))
+            MetricsManager.record_bytes(self.protocol, "rx", len(data))
             writer.write(data)
             await writer.drain()

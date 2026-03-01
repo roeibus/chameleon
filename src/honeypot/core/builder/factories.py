@@ -41,14 +41,15 @@ class ContainerBackendFactory(BackendFactory):
             pids_limit=self._pids_limit,
         )
         wrapper = ContainerWrapper(self._docker_client, config, context)
-        return ContainerBackend(wrapper)
+        return ContainerBackend(wrapper, self._name)
 
 
 class ProxyBackendFactory(BackendFactory):
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, name: str = "http_proxy") -> None:
         self._host: str = host
         self._port: int = port
+        self._name: str = name
 
     @override
     def create(self) -> Backend:
-        return StreamBackend(self._host, self._port)
+        return StreamBackend(self._host, self._port, self._name)

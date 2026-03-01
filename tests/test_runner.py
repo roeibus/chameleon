@@ -13,6 +13,10 @@ class DummyServer(ProtocolServer):
         self.mock_server = mock_server
         self.started = False
 
+    @property
+    def protocol(self) -> str:
+        return "dummy"
+
     async def start(self, stack: AsyncExitStack) -> asyncio.Server | None:
         self.started = True
         return self.mock_server

@@ -34,7 +34,7 @@ async def start_server() -> None:
         servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
 
     for svc in settings.proxy_services:
-        factory = builder.proxy(svc.target_host, svc.target_port)
+        factory = builder.proxy(svc.target_host, svc.target_port, svc.protocol.value)
         bridge_cls = BRIDGE_CLASSES[svc.protocol]
         servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
 
