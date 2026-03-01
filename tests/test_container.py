@@ -1,10 +1,22 @@
 from dataclasses import asdict
+from pathlib import Path
 
+import docker
 import pytest
-from docker.errors import APIError, ImageNotFound
+from docker.errors import APIError, ImageNotFound, DockerException
 
 from honeypot.backends.container_config import ContainerConfig
 from honeypot.backends.container_wrapper import ContainerWrapper
+
+def is_docker_available():
+    try:
+        client = docker.from_env()
+        client.ping()
+        return True
+    except (DockerException, Exception):
+        return False
+
+DOCKER_AVAILABLE = is_docker_available()
 
 @pytest.fixture
 def mock_docker_client(mocker):
@@ -130,3 +142,40 @@ def test_setup_passes_resource_limits(mock_docker_client, mock_container_obj):
     assert call_kwargs["cpu_period"] == 100000
     assert call_kwargs["cpu_quota"] == 50000
     assert call_kwargs["pids_limit"] == 32
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not DOCKER_AVAILABLE, reason="Docker daemon not found")
+def test_integration_resource_limits():
+    """Verify resource limits are enforced on a real Docker container."""
+    client = docker.from_env()
+    config = ContainerConfig(
+        image="honeypot-integration-test:latest",
+        mem_limit="128m",
+        cpu_period=100000,
+        cpu_quota=50000,
+        pids_limit=10,
+    )
+
+    # Use existing telnet Dockerfile for building the test image
+    base_dir = Path(__file__).resolve().parent.parent
+    context_path = str(base_dir / "resources" / "telnet")
+
+    wrapper = ContainerWrapper(client=client, config=config, context_path=context_path)
+
+    try:
+        wrapper.setup()
+        container = wrapper.inner_container
+
+        # Refresh attributes to ensure we have the latest from the API
+        container.reload()
+        host_config = container.attrs["HostConfig"]
+
+        # Docker returns memory in bytes: 128MB = 134217728 bytes
+        assert host_config["Memory"] == 128 * 1024 * 1024
+        assert host_config["CpuPeriod"] == 100000
+        assert host_config["CpuQuota"] == 50000
+        assert host_config["PidsLimit"] == 10
+
+    finally:
+        wrapper.teardown()

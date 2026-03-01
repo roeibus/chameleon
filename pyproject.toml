@@ -39,3 +39,9 @@ reportUnknownArgumentType = "none"
 reportUnknownVariableType = "none"
 # Many async library calls return awaitables/results we intentionally discard
 reportUnusedCallResult = "none"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests",
+]
+asyncio_default_fixture_loop_scope = "function" # Seperate Event loop for each test
