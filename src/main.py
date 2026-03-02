@@ -3,7 +3,6 @@ from contextlib import AsyncExitStack
 
 from loguru import logger
 
-from honeypot.backends.container_wrapper import LOCAL_RESOURCES_DIR
 from honeypot.config import Settings
 from honeypot.core.bridge import ProtocolServer
 from honeypot.core.builder import BackendBuilder
@@ -23,7 +22,7 @@ async def start_server() -> None:
                 settings.metrics_host, settings.metrics_port, stack
             )
 
-        builder = BackendBuilder(LOCAL_RESOURCES_DIR)
+        builder = BackendBuilder()
         servers: list[ProtocolServer] = []
 
         for svc in settings.container_services:
@@ -56,6 +55,7 @@ async def start_server() -> None:
                 )
             )
 
+        await builder.pre_build_images()
         await HoneypotRunner(servers).run(stack)
 
 

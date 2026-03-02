@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import docker
+from docker.errors import ImageNotFound
 
 from honeypot.core.builder import BackendBuilder, ProxyBackendFactory, ContainerBackendFactory
 from honeypot.backends.container_backend import ContainerBackend
@@ -21,11 +22,35 @@ def test_builder_creates_container_backend(mocker):
     mock_client = mocker.Mock(spec=docker.DockerClient)
     test_dir = Path("/tmp/fake_resources")
     builder = BackendBuilder(docker_client=mock_client, resources_dir=test_dir)
-    
+
     factory = builder.container("test_app")
-    
+
     assert isinstance(factory, ContainerBackendFactory)
-    
+
     backend = factory.create()
     assert isinstance(backend, ContainerBackend)
     assert backend._protocol == "test_app"
+
+
+def test_ensure_image_skips_build_when_image_exists(mocker):
+    mock_client = mocker.Mock(spec=docker.DockerClient)
+    mock_client.images.get.return_value = mocker.Mock()
+    factory = ContainerBackendFactory(mock_client, Path("/tmp/fake"), "telnet")
+
+    factory.ensure_image()
+
+    mock_client.images.get.assert_called_once_with("telnet")
+    mock_client.images.build.assert_not_called()
+
+
+def test_ensure_image_builds_when_image_missing(mocker):
+    mock_client = mocker.Mock(spec=docker.DockerClient)
+    mock_client.images.get.side_effect = ImageNotFound("telnet")
+    factory = ContainerBackendFactory(mock_client, Path("/tmp/fake"), "telnet")
+
+    factory.ensure_image()
+
+    mock_client.images.get.assert_called_once_with("telnet")
+    mock_client.images.build.assert_called_once_with(
+        path="/tmp/fake/telnet", tag="telnet"
+    )
