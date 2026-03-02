@@ -60,7 +60,7 @@ async def start_server() -> None:
                     )
                 )
 
-            await HoneypotRunner(servers).run(stack)
+        await HoneypotRunner(servers).run(stack)
 
 
 if __name__ == "__main__":
