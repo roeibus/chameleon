@@ -1,4 +1,3 @@
-
 import asyncio
 import signal
 from contextlib import AsyncExitStack
@@ -46,7 +45,7 @@ class HoneypotRunner:
             await server.wait_closed()
         try:
             await asyncio.wait_for(self._stop.wait(), timeout=delay)
-        except TimeoutError:
+        except (TimeoutError, asyncio.TimeoutError):
             return min(delay * 2, _MAX_BACKOFF)
         return delay  # stop was signaled; caller will exit on next loop check
 
@@ -74,7 +73,6 @@ class HoneypotRunner:
                 if self._stop.is_set():
                     return
                 delay = await self._backoff(srv, server, e, delay)
-
 
     async def run(self, stack: AsyncExitStack) -> None:
         loop = asyncio.get_running_loop()

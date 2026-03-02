@@ -54,17 +54,40 @@ class InterceptHandler(logging.Handler):
         )
 
 
-def setup_logging(log_dir: Path) -> None:
-    def router_sink(message: Message) -> None:
-        record = message.record
-        ip = record["extra"].get("ip")
+def _get_ip_log_path(log_dir: Path, ip: str) -> Path:
+    safe_ip = ip.replace("/", "_").replace("\\", "_")
+    return log_dir / f"{safe_ip}.log"
 
+
+class IpSinkRouter:
+    """Loguru sink that lazily creates and caches a dedicated per-IP file sink."""
+
+    def __init__(self, log_dir: Path) -> None:
+        self._log_dir: Path = log_dir
+        self._handlers: dict[str, int] = {}
+
+    def __call__(self, message: "Message") -> None:
+        ip = message.record["extra"].get("ip")
         if ip:
-            safe_ip = str(ip).replace("/", "_").replace("\\", "_")
-            log_file = log_dir / f"{safe_ip}.log"
+            self._ensure_sink(str(ip))
 
-            with open(log_file, "a", encoding="utf-8") as f:
-                _ = f.write(message)
+    def _ensure_sink(self, ip: str) -> None:
+        if ip in self._handlers:
+            return
+        handler_id = logger.add(
+            _get_ip_log_path(self._log_dir, ip),
+            rotation="10 MB",
+            retention="10 days",
+            compression="zip",
+            enqueue=True,
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
+            filter=lambda r, _ip=ip: r["extra"].get("ip") == _ip,
+        )
+        self._handlers[ip] = handler_id
+
+
+def setup_logging(log_dir: Path | None = None) -> None:
+    log_dir = resolve_log_dir(log_dir)
 
     logging.root.handlers = [InterceptHandler()]
     logging.root.setLevel(logging.INFO)
@@ -84,7 +107,7 @@ def setup_logging(log_dir: Path) -> None:
     )
 
     _ = logger.add(
-        log_dir / "honeypot.log",
+        log_dir / "chameleon.log",
         rotation="10 MB",
         retention="10 days",
         level="DEBUG",
@@ -93,8 +116,7 @@ def setup_logging(log_dir: Path) -> None:
     )
 
     _ = logger.add(
-        router_sink,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
-        filter=lambda r: "ip" in r["extra"],  # specific log file for connected ip
+        IpSinkRouter(log_dir),
+        filter=lambda r: "ip" in r["extra"],
         enqueue=True,
     )

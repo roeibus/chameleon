@@ -1,6 +1,5 @@
 
 import asyncio
-from unittest.mock import MagicMock, AsyncMock
 import pytest
 from honeypot.core.bridge.session import SessionBridge
 from honeypot.config import Protocol
@@ -14,18 +13,18 @@ class MockBridge(SessionBridge):
         await asyncio.sleep(0.1)
 
 @pytest.mark.asyncio
-async def test_session_bridge_max_connections_cleanup():
+async def test_session_bridge_max_connections_cleanup(mocker):
     # Mock dependencies
-    backend_factory = MagicMock()
+    backend_factory = mocker.MagicMock()
     
     # Create bridge with max_connections=1
     bridge = MockBridge(backend_factory, "127.0.0.1", 0, max_connections=1)
     
     # Mock writer
-    mock_writer = MagicMock(spec=asyncio.StreamWriter)
+    mock_writer = mocker.MagicMock(spec=asyncio.StreamWriter)
     mock_writer.get_extra_info.return_value = ("127.0.0.1", 12345)
-    mock_writer.wait_closed = AsyncMock()
-    mock_reader = MagicMock(spec=asyncio.StreamReader)
+    mock_writer.wait_closed = mocker.AsyncMock()
+    mock_reader = mocker.MagicMock(spec=asyncio.StreamReader)
     
     # First connection should succeed
     # We need to run it in a task because it sleeps
@@ -33,10 +32,10 @@ async def test_session_bridge_max_connections_cleanup():
     await asyncio.sleep(0.01) # Give it time to acquire semaphore
     
     # Second connection should be rejected
-    mock_writer2 = MagicMock(spec=asyncio.StreamWriter)
+    mock_writer2 = mocker.MagicMock(spec=asyncio.StreamWriter)
     mock_writer2.get_extra_info.return_value = ("127.0.0.1", 12346)
-    mock_writer2.wait_closed = AsyncMock()
-    mock_reader2 = MagicMock(spec=asyncio.StreamReader)
+    mock_writer2.wait_closed = mocker.AsyncMock()
+    mock_reader2 = mocker.MagicMock(spec=asyncio.StreamReader)
     
     await bridge.handle_client(mock_reader2, mock_writer2)
     
