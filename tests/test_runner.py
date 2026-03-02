@@ -24,10 +24,16 @@ class DummyServer(ProtocolServer):
 
 @pytest.mark.asyncio
 async def test_runner_starts_all_servers_and_calls_serve_forever(mocker):
-    runner = HoneypotRunner(servers=[])  # placeholder; reassigned below
 
     server1 = mocker.Mock(spec=asyncio.Server)
     server2 = mocker.Mock(spec=asyncio.Server)
+
+
+    dummy_1 = DummyServer(server1)
+    dummy_2 = DummyServer(None)  # simulates SSH (returns None)
+    dummy_3 = DummyServer(server2)
+
+    runner = HoneypotRunner(servers=[dummy_1, dummy_2, dummy_3])
 
     # server1.serve_forever triggers shutdown so the runner exits cleanly
     async def serve_and_stop():
@@ -35,12 +41,6 @@ async def test_runner_starts_all_servers_and_calls_serve_forever(mocker):
 
     server1.serve_forever = serve_and_stop
     server2.serve_forever = mocker.AsyncMock()
-
-    dummy_1 = DummyServer(server1)
-    dummy_2 = DummyServer(None)  # simulates SSH (returns None)
-    dummy_3 = DummyServer(server2)
-
-    runner._servers = [dummy_1, dummy_2, dummy_3]
 
     async with AsyncExitStack() as stack:
         await runner.run(stack)
