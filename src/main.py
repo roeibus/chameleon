@@ -19,12 +19,17 @@ async def start_server() -> None:
 
     async with AsyncExitStack() as stack:
         if settings.enable_metrics:
-            MetricsManager.start_server(settings.metrics_host, settings.metrics_port)
+            await MetricsManager.start_server(
+                settings.metrics_host, settings.metrics_port, stack
+            )
 
         builder = BackendBuilder(LOCAL_RESOURCES_DIR)
-
         servers: list[ProtocolServer] = []
+
         for svc in settings.container_services:
+            bridge_cls = BRIDGE_CLASSES.get(svc.protocol)
+            if bridge_cls is None:
+                raise ValueError(f"No bridge registered for protocol {svc.protocol!r}")
             factory = builder.container(
                 svc.protocol.value,
                 mem_limit=svc.mem_limit,
@@ -32,15 +37,24 @@ async def start_server() -> None:
                 cpu_quota=svc.cpu_quota,
                 pids_limit=svc.pids_limit,
             )
-            bridge_cls = BRIDGE_CLASSES[svc.protocol]
-            servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
+            servers.append(
+                bridge_cls(
+                    factory, settings.bind_host, svc.listen_port, svc.max_connections
+                )
+            )
 
         for svc in settings.proxy_services:
+            bridge_cls = BRIDGE_CLASSES.get(svc.protocol)
+            if bridge_cls is None:
+                raise ValueError(f"No bridge registered for protocol {svc.protocol!r}")
             factory = builder.proxy(
                 svc.target_host, svc.target_port, svc.protocol.value
             )
-            bridge_cls = BRIDGE_CLASSES[svc.protocol]
-            servers.append(bridge_cls(factory, settings.bind_host, svc.listen_port))
+            servers.append(
+                bridge_cls(
+                    factory, settings.bind_host, svc.listen_port, svc.max_connections
+                )
+            )
 
         await HoneypotRunner(servers).run(stack)
 
