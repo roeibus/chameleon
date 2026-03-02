@@ -1,7 +1,9 @@
 import asyncio
 import pytest
 
+from honeypot.config import Protocol
 from honeypot.core.backend import Backend, BackendFactory
+from honeypot.core.bridge.relay import forward_input, forward_output
 from honeypot.protocols.ssh import SshBridge, _PasswordAuthServer
 
 
@@ -44,8 +46,6 @@ class TestPasswordAuthServer:
         assert server._ip == "UNKNOWN"
 
 
-
-
 @pytest.fixture
 def mock_backend(mocker):
     backend = mocker.AsyncMock(spec=Backend)
@@ -86,68 +86,68 @@ def mock_process(mocker):
     return process
 
 
-# ── SshBridge._forward_input ─────────────────────────────────────────
+# ── relay.forward_input ──────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_forward_input_sends_to_backend(bridge, mock_backend, mock_process):
+async def test_forward_input_sends_to_backend(mock_backend, mock_process):
     mock_process.stdin.read.side_effect = [b"whoami\n", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_input(mock_process, mock_backend)
+        await forward_input(mock_process.stdin, mock_backend, Protocol.SSH)
 
     mock_backend.write.assert_awaited_with(b"whoami\n")
 
 
 @pytest.mark.asyncio
-async def test_forward_input_stops_on_empty(bridge, mock_backend, mock_process):
+async def test_forward_input_stops_on_empty(mock_backend, mock_process):
     mock_process.stdin.read.side_effect = [b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_input(mock_process, mock_backend)
+        await forward_input(mock_process.stdin, mock_backend, Protocol.SSH)
 
     mock_backend.write.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_forward_input_multiple_reads(bridge, mock_backend, mock_process):
+async def test_forward_input_multiple_reads(mock_backend, mock_process):
     mock_process.stdin.read.side_effect = [b"cmd1\n", b"cmd2\n", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_input(mock_process, mock_backend)
+        await forward_input(mock_process.stdin, mock_backend, Protocol.SSH)
 
     assert mock_backend.write.await_count == 2
 
 
-# ── SshBridge._forward_output ────────────────────────────────────────
+# ── relay.forward_output ─────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_forward_output_writes_to_process(bridge, mock_backend, mock_process):
+async def test_forward_output_writes_to_process(mock_backend, mock_process):
     mock_backend.read.side_effect = [b"output data", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_output(mock_process, mock_backend)
+        await forward_output(mock_process.stdout, mock_backend, Protocol.SSH)
 
     mock_process.stdout.write.assert_called_with(b"output data")
 
 
 @pytest.mark.asyncio
-async def test_forward_output_drains_stdout(bridge, mock_backend, mock_process):
+async def test_forward_output_drains_stdout(mock_backend, mock_process):
     mock_backend.read.side_effect = [b"data", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_output(mock_process, mock_backend)
+        await forward_output(mock_process.stdout, mock_backend, Protocol.SSH)
 
     mock_process.stdout.drain.assert_awaited()
 
 
 @pytest.mark.asyncio
-async def test_forward_output_stops_on_empty(bridge, mock_backend, mock_process):
+async def test_forward_output_stops_on_empty(mock_backend, mock_process):
     mock_backend.read.side_effect = [b""]
 
     async with asyncio.timeout(1.0):
-        await bridge._forward_output(mock_process, mock_backend)
+        await forward_output(mock_process.stdout, mock_backend, Protocol.SSH)
 
     mock_process.stdout.write.assert_not_called()
 
@@ -212,21 +212,21 @@ async def test_handle_session_full_data_flow(bridge, mock_backend, mock_process)
 async def test_start_server(bridge, mocker):
     mock_ssh_server = mocker.Mock()
     mock_ssh_server.get_addresses.return_value = [("127.0.0.1", 2222)]
-    
+
     mock_create_server = mocker.patch(
         "asyncssh.create_server", new_callable=mocker.AsyncMock
     )
     mock_create_server.return_value = mock_ssh_server
-    
+
     stack = mocker.Mock()
-    
+
     result = await bridge.start(stack)
-    
+
     assert result is None
     mock_create_server.assert_awaited_once()
     kwargs = mock_create_server.call_args.kwargs
     assert kwargs["server_host_keys"] == [bridge._host_key]
     assert kwargs["process_factory"] == bridge._handle_session
-    
+
     stack.push_async_callback.assert_called_once_with(mock_ssh_server.wait_closed)
     stack.callback.assert_called_once_with(mock_ssh_server.close)

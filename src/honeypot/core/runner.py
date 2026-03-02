@@ -1,4 +1,3 @@
-
 import asyncio
 import signal
 from contextlib import AsyncExitStack
@@ -28,7 +27,11 @@ class HoneypotRunner:
             rg.append_task(self._stop.wait())
 
     async def _backoff(
-        self, srv: ProtocolServer, server: asyncio.Server, exc: Exception, delay: float
+        self,
+        srv: ProtocolServer,
+        server: asyncio.Server | None,
+        exc: Exception,
+        delay: float,
     ) -> float:
         """Log crash, release the server port, and wait out the backoff delay.
         Returns the next delay to use. The caller should check ``_stop`` after
@@ -37,11 +40,12 @@ class HoneypotRunner:
         logger.error(
             f"[!] {srv.protocol} server error: {exc}; retrying in {delay:.0f}s"
         )
-        server.close()  # release port before retrying
-        await server.wait_closed()
+        if server is not None:
+            server.close()  # release port before retrying
+            await server.wait_closed()
         try:
             await asyncio.wait_for(self._stop.wait(), timeout=delay)
-        except TimeoutError:
+        except (TimeoutError, asyncio.TimeoutError):
             return min(delay * 2, _MAX_BACKOFF)
         return delay  # stop was signaled; caller will exit on next loop check
 
@@ -53,7 +57,13 @@ class HoneypotRunner:
         """
         delay = _INITIAL_BACKOFF
         while not self._stop.is_set():
-            server = await srv.start(stack)
+            try:
+                server = await srv.start(stack)
+            except Exception as e:
+                if self._stop.is_set():
+                    return
+                delay = await self._backoff(srv, None, e, delay)
+                continue
             if server is None:
                 return  # Protocol manages its own lifecycle (e.g. SSH)
             try:
@@ -63,7 +73,6 @@ class HoneypotRunner:
                 if self._stop.is_set():
                     return
                 delay = await self._backoff(srv, server, e, delay)
-
 
     async def run(self, stack: AsyncExitStack) -> None:
         loop = asyncio.get_running_loop()

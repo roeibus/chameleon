@@ -67,7 +67,9 @@ async def test_under_capacity_calls_handle_client():
 
     bridge._handle_client_mock.assert_called_once_with(reader, writer)
     # The slot must have been released: value is back to 1.
-    assert bridge._sem._value == 1  # type: ignore[attr-defined]
+    async with asyncio.timeout(0):
+        await bridge._sem.acquire()
+    bridge._sem.release()
 
 
 @pytest.mark.asyncio
@@ -79,12 +81,13 @@ async def test_semaphore_released_on_exception():
     writer = _make_writer()
     reader = MagicMock(spec=StreamReader)
 
-    assert bridge._sem._value == 1  # type: ignore[attr-defined]
-
     with (
         patch.object(MetricsManager, "record_connection"),
         patch.object(MetricsManager, "record_disconnection"),
     ):
         await bridge.handle_client(reader, writer)
 
-    assert bridge._sem._value == 1  # type: ignore[attr-defined]
+    # Check if slot was released
+    async with asyncio.timeout(0):
+        await bridge._sem.acquire()
+    bridge._sem.release()

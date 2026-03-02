@@ -24,10 +24,14 @@ class DummyServer(ProtocolServer):
 
 @pytest.mark.asyncio
 async def test_runner_starts_all_servers_and_calls_serve_forever(mocker):
-    runner = HoneypotRunner(servers=[])  # placeholder; reassigned below
-
     server1 = mocker.Mock(spec=asyncio.Server)
     server2 = mocker.Mock(spec=asyncio.Server)
+
+    dummy_1 = DummyServer(server1)
+    dummy_2 = DummyServer(None)  # simulates SSH (returns None)
+    dummy_3 = DummyServer(server2)
+
+    runner = HoneypotRunner(servers=[dummy_1, dummy_2, dummy_3])
 
     # server1.serve_forever triggers shutdown so the runner exits cleanly
     async def serve_and_stop():
@@ -35,12 +39,6 @@ async def test_runner_starts_all_servers_and_calls_serve_forever(mocker):
 
     server1.serve_forever = serve_and_stop
     server2.serve_forever = mocker.AsyncMock()
-
-    dummy_1 = DummyServer(server1)
-    dummy_2 = DummyServer(None)  # simulates SSH (returns None)
-    dummy_3 = DummyServer(server2)
-
-    runner._servers = [dummy_1, dummy_2, dummy_3]
 
     async with AsyncExitStack() as stack:
         await runner.run(stack)
@@ -52,11 +50,11 @@ async def test_runner_starts_all_servers_and_calls_serve_forever(mocker):
 
 @pytest.mark.asyncio
 async def test_runner_restarts_after_crash(mocker):
-    runner = HoneypotRunner(servers=[])
-
-    call_count = 0
     server = mocker.Mock(spec=asyncio.Server)
     server.close = mocker.Mock()
+    server.wait_closed = mocker.AsyncMock()
+
+    call_count = 0
 
     async def flaky_serve():
         nonlocal call_count
@@ -67,7 +65,7 @@ async def test_runner_restarts_after_crash(mocker):
 
     server.serve_forever = flaky_serve
     dummy = DummyServer(server)
-    runner._servers = [dummy]
+    runner = HoneypotRunner(servers=[dummy])
 
     async with AsyncExitStack() as stack:
         await runner.run(stack)
