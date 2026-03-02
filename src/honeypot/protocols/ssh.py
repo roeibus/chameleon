@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import AsyncExitStack
 from typing import override
 
@@ -6,15 +7,11 @@ from asyncssh import SSHServer, SSHServerConnection, SSHServerProcess, SSHKey
 from loguru import logger
 
 from honeypot.config import Protocol
-from honeypot.core.backend import Backend, BackendFactory
-from honeypot.core.bridge import (
-    MAX_OUTPUT_LOG,
-    READ_BUFFER_SIZE,
-    RECV_BUFFER_SIZE,
-    ProtocolServer,
-)
+from honeypot.core.backend import BackendFactory
+from honeypot.core.bridge import ProtocolServer
+from honeypot.core.bridge.relay import relay
 from honeypot.core.metrics import MetricsManager
-from honeypot.utils import RaceGroup, extract_ip
+from honeypot.utils import extract_ip, log_login_attempt
 
 """
     SSH bridge isn't using core components
@@ -38,18 +35,21 @@ class _PasswordAuthServer(SSHServer):
     @override
     def validate_password(self, username: str, password: str) -> bool:
         with logger.contextualize(ip=self._ip, bridge="ssh"):
-            logger.info(
-                "Login attempt: "
-                + f"username={username!r}, "
-                + f"password={password!r}"
-            )
+            log_login_attempt(username, password)
         return True
 
 
 class SshBridge(ProtocolServer):
-    def __init__(self, backend_factory: BackendFactory, host: str, port: int) -> None:
-        super().__init__(backend_factory, host, port)
+    def __init__(
+        self,
+        backend_factory: BackendFactory,
+        host: str,
+        port: int,
+        max_connections: int = 100,
+    ) -> None:
+        super().__init__(backend_factory, host, port, max_connections)
         self._host_key: SSHKey = asyncssh.generate_private_key("ssh-rsa")
+        self._sem: asyncio.Semaphore = asyncio.Semaphore(max_connections)
 
     @property
     @override
@@ -59,45 +59,30 @@ class SshBridge(ProtocolServer):
     async def _handle_session(self, process: SSHServerProcess[bytes]) -> None:
         ip = extract_ip(process)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
+            try:
+                async with asyncio.timeout(0):
+                    await self._sem.acquire()
+            except TimeoutError:
+                logger.warning("[!] Connection limit reached, rejecting")
+                MetricsManager.record_rejected_connection(self.protocol)
+                process.exit(1)
+                return
+
             logger.info("[+] New client detected")
             MetricsManager.record_connection(self.protocol)
             exit_code = 0
             try:
                 backend = self._backend_factory.create()
                 async with backend:
-                    async with RaceGroup() as rg:
-                        rg.append_task(self._forward_input(process, backend))
-                        rg.append_task(self._forward_output(process, backend))
+                    await relay(process.stdin, process.stdout, backend, self.protocol)
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
                 exit_code = 1
             finally:
                 logger.info("[-] Connection closed")
                 MetricsManager.record_disconnection(self.protocol)
+                self._sem.release()
                 process.exit(exit_code)
-
-    async def _forward_input(
-        self, process: SSHServerProcess[bytes], backend: Backend
-    ) -> None:
-        while True:
-            data = await process.stdin.read(READ_BUFFER_SIZE)
-            if not data:
-                break
-            logger.info(f"CMD: {data.decode(errors='replace').strip() or repr(data)}")
-            MetricsManager.record_bytes(self.protocol, "tx", len(data))
-            await backend.write(data)
-
-    async def _forward_output(
-        self, process: SSHServerProcess[bytes], backend: Backend
-    ) -> None:
-        while True:
-            data = await backend.read(RECV_BUFFER_SIZE)
-            if not data:
-                break
-            logger.debug(f"Output: {data.decode(errors='replace')[:MAX_OUTPUT_LOG]}")
-            MetricsManager.record_bytes(self.protocol, "rx", len(data))
-            process.stdout.write(data)
-            await process.stdout.drain()
 
     @override
     async def start(self, stack: AsyncExitStack) -> None:
