@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import override
 
 from docker import DockerClient
+from docker.errors import ImageNotFound
+from loguru import logger
 
 from honeypot.backends.container_backend import ContainerBackend
 from honeypot.backends.container_config import ContainerConfig
@@ -29,6 +31,27 @@ class ContainerBackendFactory(BackendFactory):
         self._cpu_period: int | None = cpu_period
         self._cpu_quota: int | None = cpu_quota
         self._pids_limit: int | None = pids_limit
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def ensure_image(self) -> None:
+        """Build the Docker image if it doesn't already exist locally.
+
+        Call this at startup via asyncio.to_thread() before accepting connections,
+        to prevent concurrent builds when multiple clients connect simultaneously.
+        """
+        context = str(self._resources_dir / self._name)
+        try:
+            self._docker_client.images.get(self._name)
+            logger.info(f"[*] Image '{self._name}' already exists, skipping build.")
+        except ImageNotFound:
+            logger.info(
+                f"[*] Image '{self._name}' not found, building from {context}..."
+            )
+            self._docker_client.images.build(path=context, tag=self._name)
+            logger.info(f"[+] Image '{self._name}' built successfully.")
 
     @override
     def create(self) -> Backend:

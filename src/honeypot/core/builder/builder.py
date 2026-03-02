@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import docker
@@ -15,6 +16,7 @@ class BackendBuilder:
     ) -> None:
         self._docker_client: DockerClient | None = docker_client
         self._resources_dir: Path = resources_dir or LOCAL_RESOURCES_DIR
+        self._container_factories: list[ContainerBackendFactory] = []
 
     @property
     def docker_client(self) -> DockerClient:
@@ -31,7 +33,7 @@ class BackendBuilder:
         cpu_quota: int | None = None,
         pids_limit: int | None = None,
     ) -> ContainerBackendFactory:
-        return ContainerBackendFactory(
+        factory = ContainerBackendFactory(
             self.docker_client,
             self._resources_dir,
             name,
@@ -40,6 +42,12 @@ class BackendBuilder:
             cpu_quota=cpu_quota,
             pids_limit=pids_limit,
         )
+        self._container_factories.append(factory)
+        return factory
+
+    async def pre_build_images(self) -> None:
+        unique = list({f.name: f for f in self._container_factories}.values())
+        await asyncio.gather(*(asyncio.to_thread(f.ensure_image) for f in unique))
 
     def proxy(
         self, host: str, port: int = 80, name: str = "http_proxy"

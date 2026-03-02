@@ -60,6 +60,7 @@ async def start_server() -> None:
                     )
                 )
 
+        await builder.pre_build_images()
         await HoneypotRunner(servers).run(stack)
 
 
