@@ -3,11 +3,16 @@ from asyncio import StreamReader, StreamWriter
 
 import pytest
 
+from honeypot.config import Protocol
 from honeypot.core.backend import Backend, BackendFactory
 from honeypot.core.bridge import SessionBridge
 
 
 class DummyBridge(SessionBridge):
+    @property
+    def protocol(self) -> Protocol:
+        return Protocol.HTTP_PROXY
+
     @property
     def name(self) -> str:
         return "test_honey"

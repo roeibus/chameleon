@@ -2,6 +2,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from contextlib import AsyncExitStack
 
+from honeypot.config import Protocol
 from honeypot.core.backend import BackendFactory
 
 READ_BUFFER_SIZE = 4096
@@ -17,7 +18,7 @@ class ProtocolServer(ABC):
 
     @property
     @abstractmethod
-    def protocol(self) -> str: ...
+    def protocol(self) -> Protocol: ...
 
     @abstractmethod
     async def start(self, stack: AsyncExitStack) -> asyncio.Server | None: ...
