@@ -11,6 +11,7 @@ class ServiceConfig(BaseModel):
     """
 
     listen_port: int = Field(ge=1, le=65535)
+    max_connections: int = Field(default=100, ge=1)
 
 
 class ContainerServiceConfig(ServiceConfig):

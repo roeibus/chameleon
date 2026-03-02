@@ -11,10 +11,17 @@ MAX_OUTPUT_LOG = 100
 
 
 class ProtocolServer(ABC):
-    def __init__(self, backend_factory: BackendFactory, host: str, port: int) -> None:
+    def __init__(
+        self,
+        backend_factory: BackendFactory,
+        host: str,
+        port: int,
+        max_connections: int = 100,
+    ) -> None:
         self._backend_factory: BackendFactory = backend_factory
         self._host: str = host
         self._port: int = port
+        self._max_connections: int = max_connections
 
     @property
     @abstractmethod

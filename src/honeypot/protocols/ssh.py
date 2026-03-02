@@ -47,8 +47,14 @@ class _PasswordAuthServer(SSHServer):
 
 
 class SshBridge(ProtocolServer):
-    def __init__(self, backend_factory: BackendFactory, host: str, port: int) -> None:
-        super().__init__(backend_factory, host, port)
+    def __init__(
+        self,
+        backend_factory: BackendFactory,
+        host: str,
+        port: int,
+        max_connections: int = 100,
+    ) -> None:
+        super().__init__(backend_factory, host, port, max_connections)
         self._host_key: SSHKey = asyncssh.generate_private_key("ssh-rsa")
 
     @property

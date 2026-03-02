@@ -6,7 +6,7 @@ from typing import override
 
 from loguru import logger
 
-from honeypot.core.backend import Backend
+from honeypot.core.backend import Backend, BackendFactory
 from honeypot.core.bridge.base import (
     MAX_OUTPUT_LOG,
     READ_BUFFER_SIZE,
@@ -18,11 +18,15 @@ from honeypot.utils import RaceGroup, extract_ip
 
 
 class SessionBridge(ProtocolServer, ABC):
-    @property
-    @override
-    def protocol(self) -> str:
-        """Returns the protocol name, e.g., 'telnet'."""
-        return self.__class__.__name__.lower().replace("bridge", "")
+    def __init__(
+        self,
+        backend_factory: BackendFactory,
+        host: str,
+        port: int,
+        max_connections: int = 100,
+    ) -> None:
+        super().__init__(backend_factory, host, port, max_connections)
+        self._sem: asyncio.Semaphore = asyncio.Semaphore(max_connections)
 
     async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
         pass
@@ -34,6 +38,15 @@ class SessionBridge(ProtocolServer, ABC):
     async def handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
         ip = extract_ip(writer)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
+            try:
+                async with asyncio.timeout(0):
+                    await self._sem.acquire()
+            except TimeoutError:
+                logger.warning("[!] Connection limit reached, rejecting")
+                MetricsManager.record_rejected_connection(self.protocol)
+                writer.close()
+                return
+
             logger.info("[+] New client detected")
             MetricsManager.record_connection(self.protocol)
             try:
@@ -41,6 +54,7 @@ class SessionBridge(ProtocolServer, ABC):
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
             finally:
+                self._sem.release()
                 logger.info("[-] Connection closed")
                 MetricsManager.record_disconnection(self.protocol)
                 writer.close()

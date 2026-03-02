@@ -1,5 +1,9 @@
+import asyncio
+from asyncio import StreamReader, StreamWriter
+from contextlib import AsyncExitStack
+
 from loguru import logger
-from prometheus_client import Counter, Gauge, start_http_server
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 
 
 class MetricsManager:
@@ -28,12 +32,39 @@ class MetricsManager:
     )
 
     @classmethod
-    def start_server(cls, host: str, port: int) -> None:
+    async def _handle_metrics(cls, _reader: StreamReader, writer: StreamWriter) -> None:
         try:
-            start_http_server(port, addr=host)
+            content = generate_latest()
+            header = (
+                f"HTTP/1.1 200 OK\r\n"
+                f"Content-Type: {CONTENT_TYPE_LATEST}\r\n"
+                f"Content-Length: {len(content)}\r\n"
+                f"Connection: close\r\n\r\n"
+            )
+            writer.write(header.encode())
+            writer.write(content)
+            await writer.drain()
+        except Exception as e:
+            logger.error(f"Error serving metrics: {e}")
+        finally:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except OSError:
+                pass
+
+    @classmethod
+    async def start_server(cls, host: str, port: int, stack: AsyncExitStack) -> None:
+        try:
+            server = await asyncio.start_server(cls._handle_metrics, host, port)
+            await stack.enter_async_context(server)
             logger.info(f"[*] Metrics server listening on {host}:{port}")
         except Exception as e:
             logger.error(f"Failed to start metrics server on {host}:{port}: {e}")
+
+    @classmethod
+    def record_rejected_connection(cls, protocol: str) -> None:
+        cls.CONNECTIONS_TOTAL.labels(protocol=protocol, status="rejected").inc()
 
     @classmethod
     def record_connection(cls, protocol: str) -> None:
