@@ -6,6 +6,7 @@ from typing import override
 from honeypot.core.backend import Backend
 from honeypot.core.exceptions import BackendPropertyError
 from honeypot.core.metrics import MetricsManager
+from honeypot.utils import close_writer
 
 
 class StreamBackend(Backend):
@@ -49,11 +50,7 @@ class StreamBackend(Backend):
     ) -> None:
         MetricsManager.set_backend_status(self._protocol, "stream", False)
         if self._writer:
-            self._writer.close()
-            try:
-                await self._writer.wait_closed()
-            except OSError:
-                pass
+            await close_writer(self._writer)
         self._reader = None
         self._writer = None
 

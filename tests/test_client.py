@@ -6,6 +6,7 @@ import pytest
 from honeypot.config import Protocol
 from honeypot.core.backend import Backend, BackendFactory
 from honeypot.core.bridge import SessionBridge
+from honeypot.core.bridge.relay import forward_input, forward_output, relay
 
 
 class DummyBridge(SessionBridge):
@@ -18,8 +19,9 @@ class DummyBridge(SessionBridge):
         return "test_honey"
 
     async def _handle_client(self, reader: StreamReader, writer: StreamWriter) -> None:
-        async with self._backend_factory.create() as backend:
-            await self._forward(reader, writer, backend)
+        backend = self._backend_factory.create()
+        async with backend:
+            await relay(reader, writer, backend, self.protocol)
 
 
 @pytest.fixture
@@ -60,31 +62,31 @@ def mock_writer(mocker):
 
 
 @pytest.mark.asyncio
-async def test_forward_input_sends_to_backend(bridge, mock_backend, mock_reader):
+async def test_forward_input_sends_to_backend(mock_backend, mock_reader):
     mock_reader.read.side_effect = [b"hello", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_input(mock_reader, mock_backend)
+        await forward_input(mock_reader, mock_backend, Protocol.HTTP_PROXY)
 
     mock_backend.write.assert_awaited_with(b"hello")
 
 
 @pytest.mark.asyncio
-async def test_forward_output_writes_to_client(bridge, mock_backend, mock_writer):
+async def test_forward_output_writes_to_client(mock_backend, mock_writer):
     mock_backend.read.side_effect = [b"response", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer, mock_backend)
+        await forward_output(mock_writer, mock_backend, Protocol.HTTP_PROXY)
 
     mock_writer.write.assert_called_with(b"response")
 
 
 @pytest.mark.asyncio
-async def test_forward_output_drains_writer(bridge, mock_backend, mock_writer):
+async def test_forward_output_drains_writer(mock_backend, mock_writer):
     mock_backend.read.side_effect = [b"response", b""]
 
     async with asyncio.timeout(1.0):
-        await bridge.forward_output(mock_writer, mock_backend)
+        await forward_output(mock_writer, mock_backend, Protocol.HTTP_PROXY)
 
     mock_writer.drain.assert_awaited()
 
@@ -132,9 +134,8 @@ async def test_cleanup_on_setup_error(bridge, mock_backend, mock_reader, mock_wr
 
 @pytest.mark.asyncio
 async def test_handle_client_creates_backend(
-    bridge, mock_factory, mock_reader, mock_writer, mocker
+    bridge, mock_factory, mock_reader, mock_writer
 ):
-    mocker.patch.object(bridge, "_forward", new_callable=mocker.AsyncMock)
     await bridge._handle_client(mock_reader, mock_writer)
     mock_factory.create.assert_called_once()
 

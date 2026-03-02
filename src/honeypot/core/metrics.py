@@ -5,6 +5,8 @@ from contextlib import AsyncExitStack
 from loguru import logger
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 
+from honeypot.utils import close_writer
+
 
 class MetricsManager:
     # Connection metrics
@@ -47,11 +49,7 @@ class MetricsManager:
         except Exception as e:
             logger.error(f"Error serving metrics: {e}")
         finally:
-            writer.close()
-            try:
-                await writer.wait_closed()
-            except OSError:
-                pass
+            await close_writer(writer)
 
     @classmethod
     async def start_server(cls, host: str, port: int, stack: AsyncExitStack) -> None:
@@ -61,6 +59,7 @@ class MetricsManager:
             logger.info(f"[*] Metrics server listening on {host}:{port}")
         except Exception as e:
             logger.error(f"Failed to start metrics server on {host}:{port}: {e}")
+            raise
 
     @classmethod
     def record_rejected_connection(cls, protocol: str) -> None:
