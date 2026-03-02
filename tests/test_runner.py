@@ -35,6 +35,8 @@ async def test_runner_starts_all_servers_and_calls_serve_forever(mocker):
 
     # server1.serve_forever triggers shutdown so the runner exits cleanly
     async def serve_and_stop():
+        # Give other servers a chance to start before stopping the runner
+        await asyncio.sleep(0.1)
         runner.stop()
 
     server1.serve_forever = serve_and_stop
