@@ -61,8 +61,8 @@ class SessionBridge(ProtocolServer, ABC):
         self, reader: StreamReader, writer: StreamWriter, backend: Backend
     ) -> None:
         async with RaceGroup() as rg:
-            rg.create_task(self.forward_input(reader, backend))
-            rg.create_task(self.forward_output(writer, backend))
+            rg.append_task(self.forward_input(reader, backend))
+            rg.append_task(self.forward_output(writer, backend))
 
     async def forward_input(self, reader: StreamReader, backend: Backend) -> None:
         while True:

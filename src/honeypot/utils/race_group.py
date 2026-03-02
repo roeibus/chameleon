@@ -25,10 +25,14 @@ async def _cancel_tasks(
 
 
 class RaceGroup:
+    """
+        custom asynchronous context manager designed to run multiple tasks concurrently
+        and stop them all as soon as the first task finishes.
+    """
     def __init__(self) -> None:
         self.tasks: list[Task[Any]] = []  # pyright: ignore[reportExplicitAny]
 
-    def create_task(
+    def append_task(
         self,
         coro: Coroutine[Any, Any, Any],  # pyright: ignore[reportExplicitAny]
     ) -> None:

@@ -65,8 +65,8 @@ class SshBridge(ProtocolServer):
                 backend = self._backend_factory.create()
                 async with backend:
                     async with RaceGroup() as rg:
-                        rg.create_task(self._forward_input(process, backend))
-                        rg.create_task(self._forward_output(process, backend))
+                        rg.append_task(self._forward_input(process, backend))
+                        rg.append_task(self._forward_output(process, backend))
             except (OSError, EOFError) as e:
                 logger.error(f"Bridge error: {e}")
                 exit_code = 1
