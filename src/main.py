@@ -8,13 +8,13 @@ from honeypot.core.bridge import ProtocolServer
 from honeypot.core.builder import BackendBuilder
 from honeypot.core.metrics import MetricsManager
 from honeypot.core.runner import HoneypotRunner
-from honeypot.logger.logger import resolve_log_dir, setup_logging
+from honeypot.logger.logger import setup_logging
 from honeypot.protocols import BRIDGE_CLASSES
 
 
 async def start_server() -> None:
     settings = Settings()
-    setup_logging(resolve_log_dir(settings.log_dir))
+    setup_logging(settings.log_dir)
 
     async with AsyncExitStack() as stack:
         if settings.enable_metrics:

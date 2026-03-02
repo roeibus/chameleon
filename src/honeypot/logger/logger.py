@@ -54,17 +54,40 @@ class InterceptHandler(logging.Handler):
         )
 
 
-def setup_logging(log_dir: Path) -> None:
-    def router_sink(message: Message) -> None:
-        record = message.record
-        ip = record["extra"].get("ip")
+def _rotate_log_if_needed(log_file: Path, max_bytes: int = 10 * 1024 * 1024) -> None:
+    """Rotates the log file if it exceeds the specified size."""
+    try:
+        if log_file.exists() and log_file.stat().st_size > max_bytes:
+            backup = log_file.with_suffix(".log.1")
+            log_file.replace(backup)
+    except OSError:
+        # Failure to rotate shouldn't stop the logging process
+        pass
 
-        if ip:
-            safe_ip = str(ip).replace("/", "_").replace("\\", "_")
-            log_file = log_dir / f"{safe_ip}.log"
 
-            with open(log_file, "a", encoding="utf-8") as f:
-                _ = f.write(message)
+def _get_ip_log_path(log_dir: Path, ip: str) -> Path:
+    """Generates a safe log file path for a given IP."""
+    safe_ip = ip.replace("/", "_").replace("\\", "_")
+    return log_dir / f"{safe_ip}.log"
+
+
+def _ip_router_sink(message: "Message", log_dir: Path) -> None:
+    """Routes logs to IP-specific files with basic rotation."""
+    record = message.record
+    ip = record["extra"].get("ip")
+
+    if not ip:
+        return
+
+    log_file = _get_ip_log_path(log_dir, str(ip))
+    _rotate_log_if_needed(log_file)
+
+    with open(log_file, "a", encoding="utf-8") as f:
+        _ = f.write(str(message))
+
+
+def setup_logging(log_dir: Path | None = None) -> None:
+    log_dir = resolve_log_dir(log_dir)
 
     logging.root.handlers = [InterceptHandler()]
     logging.root.setLevel(logging.INFO)
@@ -93,7 +116,7 @@ def setup_logging(log_dir: Path) -> None:
     )
 
     _ = logger.add(
-        router_sink,
+        lambda m: _ip_router_sink(m, log_dir),
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
         filter=lambda r: "ip" in r["extra"],  # specific log file for connected ip
         enqueue=True,
