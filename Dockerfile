@@ -5,7 +5,7 @@ FROM python:3.14-slim AS builder
 WORKDIR /app
 
 # Install uv for dependency management
-COPY --from=ghcr.io/astral-sh/uv:0.10.4 /usr/bin/uv /usr/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /usr/bin/uv /usr/bin/uv
 
 # Copy project configuration files
 COPY pyproject.toml ./
@@ -19,9 +19,9 @@ RUN uv sync --no-install-project
 FROM python:3.14-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH" \
+ENV PYTHONDONTWRITEBYTECODE=1
+    PYTHONUNBUFFERED=1
+    PATH="/app/.venv/bin:$PATH"
     LOG_DIR="/var/log/chameleon"
 
 # Set the working directory
@@ -44,9 +44,19 @@ COPY VERSION ./
 # Create log directory
 RUN mkdir -p ${LOG_DIR}
 
+
+# Avoid root to prevent honeypot escape
+RUN useradd --create-home --shell /usr/sbin/nologin chameleon
+
+RUN chown -R chameleon:chameleon /app ${LOG_DIR}
+
+USER chameleon
+
 # Expose common honeypot ports (customize as needed)
 # Telnet: 23, HTTP Proxy: 8080, SSH: 22
 EXPOSE 23 22 8080 9090 80
+
+
 
 # Entry point
 # The app will build backend images at runtime if they don't exist

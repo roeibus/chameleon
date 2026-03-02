@@ -42,6 +42,7 @@ class SessionBridge(ProtocolServer, ABC):
                 await close_writer(writer)
                 return
 
+
             MetricsManager.record_connection(self.protocol)
             try:
                 await self._run_session(reader, writer)
