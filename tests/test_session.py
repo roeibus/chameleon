@@ -67,8 +67,9 @@ async def test_under_capacity_calls_handle_client():
 
     bridge._handle_client_mock.assert_called_once_with(reader, writer)
     # The slot must have been released: value is back to 1.
-    assert bridge._sem._value == 1  # type: ignore[attr-defined]
-
+    async with asyncio.timeout(0):
+        await bridge._sem.acquire()
+    bridge._sem.release()
 
 @pytest.mark.asyncio
 async def test_semaphore_released_on_exception():
