@@ -62,7 +62,7 @@ class SshBridge(ProtocolServer):
             try:
                 async with asyncio.timeout(0):
                     await self._sem.acquire()
-            except TimeoutError:
+            except (TimeoutError, asyncio.TimeoutError):
                 logger.warning("[!] Connection limit reached, rejecting")
                 MetricsManager.record_rejected_connection(self.protocol)
                 process.exit(1)
