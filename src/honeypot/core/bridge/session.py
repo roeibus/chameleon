@@ -18,12 +18,6 @@ from honeypot.utils import RaceGroup, extract_ip
 
 
 class SessionBridge(ProtocolServer, ABC):
-    @property
-    @override
-    def protocol(self) -> str:
-        """Returns the protocol name, e.g., 'telnet'."""
-        return self.__class__.__name__.lower().replace("bridge", "")
-
     async def greet(self, _reader: StreamReader, _writer: StreamWriter) -> None:
         pass
 
@@ -61,8 +55,8 @@ class SessionBridge(ProtocolServer, ABC):
         self, reader: StreamReader, writer: StreamWriter, backend: Backend
     ) -> None:
         async with RaceGroup() as rg:
-            rg.create_task(self.forward_input(reader, backend))
-            rg.create_task(self.forward_output(writer, backend))
+            rg.append_task(self.forward_input(reader, backend))
+            rg.append_task(self.forward_output(writer, backend))
 
     async def forward_input(self, reader: StreamReader, backend: Backend) -> None:
         while True:
