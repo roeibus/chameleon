@@ -5,6 +5,7 @@ import asyncssh
 from asyncssh import SSHServer, SSHServerConnection, SSHServerProcess, SSHKey
 from loguru import logger
 
+from honeypot.config import Protocol
 from honeypot.core.backend import Backend, BackendFactory
 from honeypot.core.bridge import (
     MAX_OUTPUT_LOG,
@@ -52,8 +53,8 @@ class SshBridge(ProtocolServer):
 
     @property
     @override
-    def protocol(self) -> str:
-        return "ssh"
+    def protocol(self) -> Protocol:
+        return Protocol.SSH
 
     async def _handle_session(self, process: SSHServerProcess[bytes]) -> None:
         ip = extract_ip(process)
