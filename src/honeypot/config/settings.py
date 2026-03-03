@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     )
 
     container_services: list[ContainerServiceConfig] = [
-        ContainerServiceConfig(protocol=Protocol.TELNET, listen_port=2323),
-        ContainerServiceConfig(protocol=Protocol.SSH, listen_port=2222),
+        ContainerServiceConfig(protocol=Protocol.TELNET, listen_port=23),
+        ContainerServiceConfig(protocol=Protocol.SSH, listen_port=22),
     ]
     proxy_services: list[HttpProxyConfig] = []
     bind_host: str = "0.0.0.0"
