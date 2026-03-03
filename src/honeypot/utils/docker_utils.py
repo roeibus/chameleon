@@ -1,5 +1,6 @@
 import asyncio
 
+from collections.abc import Sequence
 import typing as t
 
 from docker import DockerClient
@@ -33,7 +34,7 @@ async def cleanup_stale_containers(client: DockerClient) -> None:
             logger.warning(f"Failed to remove container {container.short_id}: {e}")
 
 
-async def pre_build_images(factories: list["ContainerBackendFactory"]) -> None:
+async def pre_build_images(factories: Sequence["ContainerBackendFactory"]) -> None:
     """
     Eagerly build Docker images for all container factories
     before accepting connections.
