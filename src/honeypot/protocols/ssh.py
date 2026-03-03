@@ -11,7 +11,7 @@ from honeypot.core.backend import BackendFactory
 from honeypot.core.bridge import ProtocolServer
 from honeypot.core.bridge.relay import relay
 from honeypot.core.metrics import MetricsManager
-from honeypot.utils import extract_ip, log_login_attempt
+from honeypot.utils import extract_ip, log_login_attempt, get_host_key
 
 """
     SSH bridge isn't using core components
@@ -48,7 +48,7 @@ class SshBridge(ProtocolServer):
         max_connections: int = 100,
     ) -> None:
         super().__init__(backend_factory, host, port, max_connections)
-        self._host_key: SSHKey = asyncssh.generate_private_key("ssh-rsa")
+        self._host_key: SSHKey = get_host_key()
         self._sem: asyncio.Semaphore = asyncio.Semaphore(max_connections)
 
     @property
