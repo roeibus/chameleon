@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Sequence
 
 import docker
 from docker import DockerClient
@@ -24,8 +25,8 @@ class BackendBuilder:
         return self._docker_client
 
     @property
-    def container_factories(self) -> list[ContainerBackendFactory]:
-        return self._container_factories
+    def container_factories(self) -> Sequence[ContainerBackendFactory]:
+        return tuple(self._container_factories)
 
     def container(
         self,

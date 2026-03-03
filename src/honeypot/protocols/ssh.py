@@ -3,7 +3,7 @@ from contextlib import AsyncExitStack
 from typing import override
 
 import asyncssh
-from asyncssh import SSHServer, SSHServerConnection, SSHServerProcess, SSHKey
+from asyncssh import SSHKey, SSHServer, SSHServerConnection, SSHServerProcess
 from loguru import logger
 
 from honeypot.config import Protocol
@@ -11,7 +11,7 @@ from honeypot.core.backend import BackendFactory
 from honeypot.core.bridge import ProtocolServer
 from honeypot.core.bridge.relay import relay
 from honeypot.core.metrics import MetricsManager
-from honeypot.utils import extract_ip, log_login_attempt, get_host_key
+from honeypot.utils import extract_ip, get_host_key, log_login_attempt
 
 """
     SSH bridge isn't using core components
@@ -48,7 +48,7 @@ class SshBridge(ProtocolServer):
         max_connections: int = 100,
     ) -> None:
         super().__init__(backend_factory, host, port, max_connections)
-        self._host_key: SSHKey = get_host_key()
+        self._host_key: SSHKey | None = None
         self._sem: asyncio.Semaphore = asyncio.Semaphore(max_connections)
 
     @property
@@ -86,6 +86,9 @@ class SshBridge(ProtocolServer):
 
     @override
     async def start(self, stack: AsyncExitStack) -> None:
+        if self._host_key is None:
+            self._host_key = await asyncio.to_thread(get_host_key)
+
         ssh_server = await asyncssh.create_server(
             _PasswordAuthServer,
             self._host,
@@ -98,4 +101,4 @@ class SshBridge(ProtocolServer):
         stack.push_async_callback(ssh_server.wait_closed)
         stack.callback(ssh_server.close)
         logger.info(f"[*] SSH listening on {ssh_server.get_addresses()}")
-        return None  # asyncssh manages its own serve loop
+        # Returns None because asyncssh manages its own server.

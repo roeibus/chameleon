@@ -1,4 +1,5 @@
 import os
+import stat
 from pathlib import Path
 
 import asyncssh
@@ -14,5 +15,6 @@ def get_host_key(path: Path | None = None) -> SSHKey:
     path.parent.mkdir(parents=True, exist_ok=True)
     key = asyncssh.generate_private_key("ssh-rsa")
     key.write_private_key(str(path))
+    path.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
     logger.info(f"[*] Generated new SSH host key at {path}")
     return key

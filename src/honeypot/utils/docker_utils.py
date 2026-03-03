@@ -23,11 +23,11 @@ async def cleanup_stale_containers(client: DockerClient) -> None:
     logger.info(f"[*] Found {len(containers)} stale container(s), cleaning up...")
     for container in containers:
         try:
-            container.kill()
+            await asyncio.to_thread(container.kill)
         except APIError:
             pass
         try:
-            container.remove()
+            await asyncio.to_thread(container.remove)
             logger.info(f"[-] Removed stale container {container.short_id}.")
         except APIError as e:
             logger.warning(f"Failed to remove container {container.short_id}: {e}")
