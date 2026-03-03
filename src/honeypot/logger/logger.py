@@ -79,6 +79,7 @@ class IpSinkRouter:
             rotation="10 MB",
             retention="10 days",
             compression="zip",
+            level="INFO",
             enqueue=True,
             colorize=True,
             format=(

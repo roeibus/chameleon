@@ -37,7 +37,7 @@ services:
       - ./logs:/var/log/chameleon
     ports:
       - "2222:22"     # SSH Honeypot (map host 22 to 2222 if you want it on standard port)
-      - "2323:23"     # Telnet Honeypot (map host 23 to 2323)
+      - "23:23"       # Telnet Honeypot (standard port)
       - "80:80"       # HTTP
       - "8080:8080"   # HTTP Proxy
       - "8081:8081"   # HTTP Alt
