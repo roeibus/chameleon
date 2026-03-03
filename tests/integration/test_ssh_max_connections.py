@@ -36,8 +36,8 @@ async def test_ssh_max_connections(container_backend_factory):
         conn2 = await asyncssh.connect(
             "127.0.0.1",
             port=port,
-            username="admin",
-            password="secret",
+            username="user2",
+            password="other",
             known_hosts=None,
         )
         process2 = await conn2.create_process(encoding=None)

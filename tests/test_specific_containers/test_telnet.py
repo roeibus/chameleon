@@ -28,6 +28,7 @@ def mock_reader(mocker):
 def mock_writer(mocker):
     writer = mocker.Mock()
     writer.drain = mocker.AsyncMock()
+    writer.get_extra_info.return_value = ("127.0.0.1", 12345)
     return writer
 
 @pytest.mark.asyncio
