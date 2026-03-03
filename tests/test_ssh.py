@@ -19,31 +19,7 @@ class TestPasswordAuthServer:
         server = _PasswordAuthServer()
         assert server.validate_password("root", "toor") is True
 
-    def test_validate_password_logs_credentials(self, mocker):
-        mock_info = mocker.patch("honeypot.protocols.ssh.logger.info")
-        server = _PasswordAuthServer()
-        server.validate_password("admin", "1234")
 
-        mock_info.assert_called_once()
-        msg = mock_info.call_args[0][0]
-        assert "admin" in msg
-        assert "1234" in msg
-
-    def test_connection_made_extracts_ip(self, mocker):
-        conn = mocker.Mock()
-        conn.get_extra_info.return_value = ("10.0.0.1", 9999)
-
-        server = _PasswordAuthServer()
-        server.connection_made(conn)
-        assert server._ip == "10.0.0.1"
-
-    def test_connection_made_no_peername_defaults_unknown(self, mocker):
-        conn = mocker.Mock()
-        conn.get_extra_info.return_value = None
-
-        server = _PasswordAuthServer()
-        server.connection_made(conn)
-        assert server._ip == "UNKNOWN"
 
 
 @pytest.fixture

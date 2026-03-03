@@ -10,7 +10,7 @@ from honeypot.core.metrics import MetricsManager
 from honeypot.core.runner import HoneypotRunner
 from honeypot.logger.logger import resolve_log_dir, setup_logging
 from honeypot.protocols import BRIDGE_CLASSES
-from honeypot.utils import cleanup_stale_containers, pre_build_images
+from honeypot.utils.docker_utils import cleanup_stale_containers, pre_build_images
 
 
 async def start_server() -> None:
