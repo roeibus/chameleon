@@ -1,4 +1,5 @@
 from asyncio import StreamWriter
+
 from loguru import logger
 
 
@@ -30,6 +31,14 @@ def safe_decode(data: bytes, limit: int | None = None) -> str:
 
 def log_login_attempt(username: str | bytes, password: str | bytes) -> None:
     """Log a login attempt with username and password."""
-    u = safe_decode(username).strip() if isinstance(username, bytes) else str(username).strip()
-    p = safe_decode(password).strip() if isinstance(password, bytes) else str(password).strip()
+    u = (
+        safe_decode(username).strip()
+        if isinstance(username, bytes)
+        else str(username).strip()
+    )
+    p = (
+        safe_decode(password).strip()
+        if isinstance(password, bytes)
+        else str(password).strip()
+    )
     logger.info(f"Login attempt: username={u!r}, password={p!r}")
