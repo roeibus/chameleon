@@ -34,7 +34,7 @@ services:
       # Persist the SSH host key across container restarts
       - chameleon-data:/data
       # Bind-mount logs to host so they're readable without entering the container
-      - ./logs:/var/log/chameleon
+      - /var/log/chameleon:/var/log/chameleon
     ports:
       - "2222:22"     # SSH Honeypot (map host 22 to 2222 if you want it on standard port)
       - "23:23"       # Telnet Honeypot (standard port)
