@@ -6,6 +6,7 @@ from honeypot.utils.session_utils import (
     safe_decode,
     log_login_attempt,
 )
+from honeypot.utils.ssh_key import get_host_key
 
 __all__ = [
     "RaceGroup",
@@ -14,5 +15,6 @@ __all__ = [
     "safe_write",
     "safe_decode",
     "log_login_attempt",
+    "get_host_key",
 ]
 

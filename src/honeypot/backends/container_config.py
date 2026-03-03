@@ -12,3 +12,4 @@ class ContainerConfig:
     cpu_period: int | None = None
     cpu_quota: int | None = None
     pids_limit: int | None = None
+    labels: dict[str, str] | None = None

@@ -30,7 +30,7 @@ WORKDIR /app
 # Install runtime dependencies (e.g., docker-cli if needed, but the python lib handles it)
 # We might need docker-cli if we want to manually check things, but for the lib it's not strictly required.
 # However, having it is good for the "build inside" requirement if we want to pre-build.
-RUN apt-get update && apt-get install -y --no-install-recommends docker.io \
+RUN apt-get update && apt-get install -y --no-install-recommends docker.io openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the virtual environment from the builder stage
@@ -41,16 +41,12 @@ COPY src ./src
 COPY resources ./resources
 COPY VERSION ./
 
-# Create log directory
-RUN mkdir -p ${LOG_DIR}
+# Create log directory and generate persistent SSH host key
+RUN mkdir -p ${LOG_DIR} /data && \
+    ssh-keygen -t rsa -b 4096 -f /data/ssh_host_key -N "" && \
+    chmod 600 /data/ssh_host_key
 
-
-# Avoid root to prevent honeypot escape
-RUN useradd --create-home --shell /usr/sbin/nologin chameleon
-
-RUN chown -R chameleon:chameleon /app ${LOG_DIR}
-
-USER chameleon
+VOLUME ["/data"]
 
 # Expose common honeypot ports (customize as needed)
 # Telnet: 23, HTTP Proxy: 8080, SSH: 22

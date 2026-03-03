@@ -62,6 +62,7 @@ class ContainerBackendFactory(BackendFactory):
             cpu_period=self._cpu_period,
             cpu_quota=self._cpu_quota,
             pids_limit=self._pids_limit,
+            labels={"chameleon": "true"},
         )
         wrapper = ContainerWrapper(self._docker_client, config, context)
         return ContainerBackend(wrapper, self._name)

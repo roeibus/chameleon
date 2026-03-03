@@ -1,0 +1,51 @@
+services:
+  # The Docker Socket Proxy restricts what the honeypot can do with the host's Docker daemon.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy@sha256:1f3a6f303320723d199d2316a3e82b2e2685d86c275d5e3deeaf182573b47476
+    restart: always
+    environment:
+      # Allow operations needed by the honeypot
+      CONTAINERS: 1
+      IMAGES: 1
+      BUILD: 1
+      # Explicitly deny critical security paths (enabled by default in proxy, but good to be explicit)
+      NETWORKS: 0
+      VOLUMES: 0
+      EXEC: 0
+      SWARM: 0
+      SECRETS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - chameleon-internal
+
+  # The main Chameleon honeypot application
+  chameleon:
+    build: .
+    restart: always
+    environment:
+      # Tell docker-py to use the proxy instead of the local socket
+      - DOCKER_HOST=tcp://docker-proxy:2375
+      - CHAMELEON_HOST_KEY_PATH=/data/ssh_host_key
+    volumes:
+      # Persist the SSH host key and logs across container restarts
+      - chameleon-data:/data
+      - chameleon-logs:/var/log/chameleon
+    ports:
+      - "2222:22"    # SSH Honeypot (map host 22 to 2222 if you want it on standard port)
+      - "2323:23"    # Telnet Honeypot (map host 23 to 2323)
+      - "8080:8080"  # HTTP Proxy
+      - "9090:9090"  # Metrics
+    networks:
+      - chameleon-internal
+    depends_on:
+      - docker-proxy
+
+volumes:
+  chameleon-data:
+  chameleon-logs:
+
+networks:
+  chameleon-internal:
+    # Isolated network, does not allow containers attached here to access the internet unless needed
+    # We leave default bridge routing for the manager to download images.

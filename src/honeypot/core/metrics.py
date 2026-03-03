@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 from loguru import logger
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 
-from honeypot.utils import close_writer
+from honeypot.utils.session_utils import close_writer
 
 
 class MetricsManager:

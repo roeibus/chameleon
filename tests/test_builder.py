@@ -7,6 +7,7 @@ from docker.errors import ImageNotFound
 from honeypot.core.builder import BackendBuilder, ProxyBackendFactory, ContainerBackendFactory
 from honeypot.backends.container_backend import ContainerBackend
 from honeypot.backends.stream_backend import StreamBackend
+from honeypot.utils.docker_utils import pre_build_images
 
 def test_builder_creates_stream_backend_for_proxy(mocker):
     mock_client = mocker.Mock(spec=docker.DockerClient)
@@ -57,6 +58,7 @@ def test_ensure_image_builds_when_image_missing(mocker):
     )
 
 
+
 @pytest.mark.asyncio
 async def test_pre_build_images_deduplicates_same_name(mocker):
     """Two factories with the same name → only the last one's ensure_image is called."""
@@ -69,7 +71,7 @@ async def test_pre_build_images_deduplicates_same_name(mocker):
     mocker.patch.object(f1, "ensure_image")
     mocker.patch.object(f2, "ensure_image")
 
-    await builder.pre_build_images()
+    await pre_build_images(builder.container_factories)
 
     f1.ensure_image.assert_not_called()
     f2.ensure_image.assert_called_once()
@@ -87,7 +89,7 @@ async def test_pre_build_images_calls_all_unique_factories(mocker):
     mocker.patch.object(f1, "ensure_image")
     mocker.patch.object(f2, "ensure_image")
 
-    await builder.pre_build_images()
+    await pre_build_images(builder.container_factories)
 
     f1.ensure_image.assert_called_once()
     f2.ensure_image.assert_called_once()
@@ -99,4 +101,4 @@ async def test_pre_build_images_noop_with_no_factories(mocker):
     mock_client = mocker.Mock(spec=docker.DockerClient)
     builder = BackendBuilder(docker_client=mock_client)
 
-    await builder.pre_build_images()  # should not raise
+    await pre_build_images(builder.container_factories)  # should not raise
