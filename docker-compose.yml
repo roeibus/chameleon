@@ -31,9 +31,10 @@ services:
       - DOCKER_HOST=tcp://docker-proxy:2375
       - CHAMELEON_HOST_KEY_PATH=/data/ssh_host_key
     volumes:
-      # Persist the SSH host key and logs across container restarts
+      # Persist the SSH host key across container restarts
       - chameleon-data:/data
-      - chameleon-logs:/var/log/chameleon
+      # Bind-mount logs to host so they're readable without entering the container
+      - ./logs:/var/log/chameleon
     ports:
       - "2222:22"     # SSH Honeypot (map host 22 to 2222 if you want it on standard port)
       - "2323:23"     # Telnet Honeypot (map host 23 to 2323)
@@ -52,7 +53,6 @@ services:
 
 volumes:
   chameleon-data:
-  chameleon-logs:
 
 networks:
   chameleon-internal:
