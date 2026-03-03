@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     proxy_services: list[HttpProxyConfig] = []
     bind_host: str = "0.0.0.0"
     log_dir: Path | None = None
-    
+
     enable_metrics: bool = True
     metrics_host: str = "127.0.0.1"
     metrics_port: int = Field(default=9090, ge=1, le=65535)

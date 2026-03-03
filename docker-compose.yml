@@ -8,6 +8,9 @@ services:
       CONTAINERS: 1
       IMAGES: 1
       BUILD: 1
+      POST: 1
+      INFO: 1
+      VERSION: 1
       # Explicitly deny critical security paths (enabled by default in proxy, but good to be explicit)
       NETWORKS: 0
       VOLUMES: 0
@@ -28,14 +31,21 @@ services:
       - DOCKER_HOST=tcp://docker-proxy:2375
       - CHAMELEON_HOST_KEY_PATH=/data/ssh_host_key
     volumes:
-      # Persist the SSH host key and logs across container restarts
+      # Persist the SSH host key across container restarts
       - chameleon-data:/data
-      - chameleon-logs:/var/log/chameleon
+      # Bind-mount logs to host so they're readable without entering the container
+      - ./logs:/var/log/chameleon
     ports:
-      - "2222:22"    # SSH Honeypot (map host 22 to 2222 if you want it on standard port)
-      - "2323:23"    # Telnet Honeypot (map host 23 to 2323)
-      - "8080:8080"  # HTTP Proxy
-      - "9090:9090"  # Metrics
+      - "2222:22"     # SSH Honeypot (map host 22 to 2222 if you want it on standard port)
+      - "2323:23"     # Telnet Honeypot (map host 23 to 2323)
+      - "80:80"       # HTTP
+      - "8080:8080"   # HTTP Proxy
+      - "8081:8081"   # HTTP Alt
+      - "9090:9090"   # Metrics
+      - "5060:5060"   # SIP
+      - "7547:7547"   # TR-069 (CWMP)
+      - "8291:8291"   # MikroTik Winbox
+      - "37777:37777" # Dahua DVR
     networks:
       - chameleon-internal
     depends_on:
@@ -43,7 +53,6 @@ services:
 
 volumes:
   chameleon-data:
-  chameleon-logs:
 
 networks:
   chameleon-internal:
