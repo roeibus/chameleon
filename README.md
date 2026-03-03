@@ -1,128 +1,190 @@
-# HoneyPot
+# Chameleon
 
-## Getting started
+An IoT honeypot that emulates vulnerable network services (Telnet, SSH, HTTP proxy) to detect and analyze malicious activity. Each attacker session is bridged to an isolated Docker container or remote TCP host, with all interactions logged per attacker IP.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Features
 
-Already a pro? Just edit this README.md and make it your own. Want to make it
-easy? [Use the template at the bottom](#editing-this-readme)!
+- **Multi-protocol support** — Telnet, SSH, and HTTP proxy emulation
+- **Container isolation** — Each connection spawns a fresh Docker container with strict resource limits (memory, CPU, PID, network)
+- **Per-IP logging** — All session data written to separate log files per attacker IP using loguru
+- **Prometheus metrics** — Active sessions, connection counts, and bytes transferred per protocol
+- **Connection limiting** — Semaphore-based per-protocol connection caps
+- **Resilient supervision** — Exponential backoff restart on server crash, graceful SIGINT/SIGTERM shutdown
+- **Secure Docker access** — `docker-socket-proxy` restricts the honeypot to only build images and manage containers
 
-## Add your files
-
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file)
-  or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or
-  push an existing Git repository with the following command:
+## Architecture
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/RoeiAmit/honeypot.git
-git branch -M main
-git push -uf origin main
+Client → Protocol Bridge (TelnetBridge / SshBridge / HttpProxyBridge)
+              ↓
+         SessionBridge (base abstraction)
+              ↓
+         Backend (ContainerBackend or StreamBackend)
+              ↓
+    Docker Container OR Remote TCP Host
 ```
 
-## Integrate with your tools
+**Key components:**
 
-* [Set up project integrations](https://gitlab.com/RoeiAmit/honeypot/-/settings/integrations)
+| Path | Description |
+|------|-------------|
+| `src/main.py` | Entry point — configures services, starts servers |
+| `src/honeypot/backends/` | `ContainerBackend` and `StreamBackend` implementations |
+| `src/honeypot/core/backend/` | `Backend` interface and `BackendFactory` ABC |
+| `src/honeypot/core/bridge/` | `ProtocolServer` and `SessionBridge` base classes |
+| `src/honeypot/core/builder/` | `BackendBuilder` and factory implementations |
+| `src/honeypot/protocols/` | `TelnetBridge`, `SshBridge`, `HttpProxyBridge` |
+| `src/honeypot/config/` | Pydantic settings and service config models |
+| `src/honeypot/logger/logger.py` | Loguru setup with per-IP log routing |
+| `src/honeypot/core/metrics.py` | Prometheus metrics and HTTP server |
+| `src/honeypot/core/runner.py` | `HoneypotRunner` with backoff and signal handling |
+| `src/honeypot/utils/race_group.py` | `RaceGroup` — cancels all tasks when the first completes |
 
-## Collaborate with your team
+## Requirements
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to
-structure it however you want - this is just a starting point!). Thanks
-to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are
-suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long
-is better than too short. If you think your README is too long, consider utilizing another form of documentation rather
-than cutting out information.
-
-## Name
-
-Choose a self-explaining name for your project.
-
-## Description
-
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be
-unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your
-project, this is a good place to list differentiating factors.
-
-## Badges
-
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the
-project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see
-GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- Python 3.14+
+- [uv](https://github.com/astral-sh/uv)
+- Docker (running daemon)
 
 ## Installation
 
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew.
-However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing
-specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a
-specific context like a particular programming language version or operating system or has dependencies that have to be
-installed manually, also add a Requirements subsection.
+```bash
+git clone <repo-url>
+cd chameleon
+uv sync
+```
 
-## Usage
+## Running
 
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of
-usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably
-include in the README.
+### Directly
 
-## Support
+```bash
+uv run python src/main.py
+```
 
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address,
-etc.
+### With Docker Compose (recommended)
 
-## Roadmap
+```bash
+docker-compose up -d
+```
 
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+This starts two containers:
+- **docker-proxy** — restricts Docker socket access to only what the honeypot needs
+- **chameleon** — the honeypot itself
 
-## Contributing
+Default exposed ports:
 
-State if you are open to contributions and what your requirements are for accepting them.
+| Port | Service |
+|------|---------|
+| 2323 | Telnet |
+| 2222 | SSH |
+| 8080 | HTTP Proxy |
+| 9090 | Prometheus metrics |
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started.
-Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps
-explicit. These instructions could also be useful to your future self.
+## Configuration
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce
-the likelihood that the changes inadvertently break something. Having instructions for running tests is especially
-helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+Configuration is handled via environment variables (pydantic-settings). All variables are prefixed with `CHAMELEON_`.
 
-## Authors and acknowledgment
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHAMELEON_BIND_HOST` | `0.0.0.0` | Address to bind all servers |
+| `CHAMELEON_LOG_DIR` | `/var/log/chameleon` | Directory for log files |
+| `CHAMELEON_ENABLE_METRICS` | `true` | Enable Prometheus metrics server |
+| `CHAMELEON_METRICS_HOST` | `127.0.0.1` | Metrics server bind address |
+| `CHAMELEON_METRICS_PORT` | `9090` | Metrics server port |
+| `CHAMELEON_CONTAINER_SERVICES` | See below | JSON list of container service configs |
+| `CHAMELEON_PROXY_SERVICES` | `[]` | JSON list of HTTP proxy service configs |
 
-Show your appreciation to those who have contributed to the project.
+### Container service config
 
-## License
+```json
+[
+  {
+    "protocol": "telnet",
+    "listen_port": 2323,
+    "max_connections": 100,
+    "mem_limit": "128m",
+    "cpu_period": 100000,
+    "cpu_quota": 50000,
+    "pids_limit": 64
+  },
+  {
+    "protocol": "ssh",
+    "listen_port": 2222,
+    "max_connections": 100
+  }
+]
+```
 
-For open source projects, say how it is licensed.
+### HTTP proxy service config
 
-## Project status
+```json
+[
+  {
+    "protocol": "http_proxy",
+    "listen_port": 8080,
+    "target_host": "example.com",
+    "target_port": 80,
+    "max_connections": 100
+  }
+]
+```
 
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has
-slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or
-owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Logging
+
+Logs are written to three sinks:
+
+- **Stderr** — colored INFO+ output
+- **`{LOG_DIR}/chameleon.log`** — central log (10 MB rotation, 10-day retention, zip compressed)
+- **`{LOG_DIR}/{attacker_ip}.log`** — per-IP session log (same rotation policy)
+
+All log records include the attacker's IP and the protocol bridge name as structured fields.
+
+## Metrics
+
+Prometheus metrics are exposed at `http://{METRICS_HOST}:{METRICS_PORT}/metrics`.
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `chameleon_active_sessions` | Gauge | Currently active sessions by protocol |
+| `chameleon_connections_total` | Counter | Total connections (labels: `protocol`, `status`) |
+| `chameleon_bytes_total` | Counter | Bytes transferred (labels: `protocol`, `direction`) |
+| `chameleon_backend_up` | Gauge | Backend health — 1 up, 0 down (labels: `protocol`, `backend_type`) |
+
+## Development
+
+```bash
+# Install all extras
+uv sync --extra dev --extra test
+
+# Lint
+uv run ruff check src/
+
+# Type check
+uv run basedpyright src/
+
+# Run all tests
+uv run --extra test pytest ./
+
+# Run a single test file
+uv run --extra test pytest tests/test_client.py
+```
+
+Integration tests require a running Docker daemon. Tests that need Docker are marked `@pytest.mark.integration` and are skipped automatically if Docker is unavailable.
+
+## Adding a New Protocol
+
+1. Implement a `Backend` subclass, or reuse `ContainerBackend`/`StreamBackend`.
+2. Implement a `SessionBridge` subclass with protocol-specific `greet()` and `_handle_client()` logic.
+3. Add a corresponding `BackendFactory` if needed.
+4. Register it in `src/main.py` under `BRIDGE_CLASSES` and wire up the builder.
+
+## CI/CD
+
+GitHub Actions runs three parallel jobs on every pull request:
+
+1. **ruff** — `ruff check src/`
+2. **basedpyright** — `basedpyright src/`
+3. **pytest** — `pytest ./`
+
+All jobs run on Python 3.14.
