@@ -10,8 +10,7 @@ from honeypot.config import Protocol
 from honeypot.core.backend import BackendFactory
 from honeypot.core.bridge import ProtocolServer
 from honeypot.core.bridge.relay import relay
-from honeypot.core.metrics import MetricsManager
-from honeypot.utils import extract_ip, get_host_key, log_login_attempt
+from honeypot.utils import CredCache, extract_ip, get_host_key, log_login_attempt
 
 """
     SSH bridge isn't using core components
@@ -20,9 +19,10 @@ from honeypot.utils import extract_ip, get_host_key, log_login_attempt
 
 
 class _PasswordAuthServer(SSHServer):
-    def __init__(self) -> None:
+    def __init__(self, cred_cache: CredCache | None = None) -> None:
         super().__init__()
         self._ip: str = "UNKNOWN"
+        self._cred_cache: CredCache = cred_cache or CredCache()
 
     @override
     def connection_made(self, conn: SSHServerConnection) -> None:
@@ -36,6 +36,9 @@ class _PasswordAuthServer(SSHServer):
     def validate_password(self, username: str, password: str) -> bool:
         with logger.contextualize(ip=self._ip, bridge="ssh"):
             log_login_attempt(username, password)
+            if not self._cred_cache.is_new(self._ip, username, password):
+                logger.info("[~] Repeated credentials from known IP, denying")
+                return False
         return True
 
 
@@ -46,10 +49,11 @@ class SshBridge(ProtocolServer):
         host: str,
         port: int,
         max_connections: int = 100,
+        cred_cache: CredCache | None = None,
     ) -> None:
         super().__init__(backend_factory, host, port, max_connections)
         self._host_key: SSHKey | None = None
-        self._sem: asyncio.Semaphore = asyncio.Semaphore(max_connections)
+        self._cred_cache: CredCache = cred_cache or CredCache()
 
     @property
     @override
@@ -59,17 +63,11 @@ class SshBridge(ProtocolServer):
     async def _handle_session(self, process: SSHServerProcess[bytes]) -> None:
         ip = extract_ip(process)
         with logger.contextualize(ip=ip, bridge=self.__class__.__name__):
-            try:
-                async with asyncio.timeout(0):
-                    await self._sem.acquire()
-            except (TimeoutError, asyncio.TimeoutError):
-                logger.warning("[!] Connection limit reached, rejecting")
-                MetricsManager.record_rejected_connection(self.protocol)
+            if not await self._try_acquire():
                 process.exit(1)
                 return
 
             logger.info("[+] New client detected")
-            MetricsManager.record_connection(self.protocol)
             exit_code = 0
             try:
                 backend = self._backend_factory.create()
@@ -80,8 +78,7 @@ class SshBridge(ProtocolServer):
                 exit_code = 1
             finally:
                 logger.info("[-] Connection closed")
-                MetricsManager.record_disconnection(self.protocol)
-                self._sem.release()
+                self._release()
                 process.exit(exit_code)
 
     @override
@@ -90,7 +87,7 @@ class SshBridge(ProtocolServer):
             self._host_key = await asyncio.to_thread(get_host_key)
 
         ssh_server = await asyncssh.create_server(
-            _PasswordAuthServer,
+            lambda: _PasswordAuthServer(self._cred_cache),
             self._host,
             self._port,
             server_host_keys=[self._host_key],
