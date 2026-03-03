@@ -1,6 +1,6 @@
 FROM alpine:3.21
 
-RUN apk add --no-cache bash curl wget
+RUN apk add --no-cache bash curl wget vim less
 
 RUN echo "NuclearCodes=83716238490" > /root/totally_normal_file.txt
 

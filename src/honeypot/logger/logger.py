@@ -29,7 +29,7 @@ def resolve_log_dir(log_dir: Path | None = None) -> Path:
         if xdg_state
         else Path.home() / ".local" / "state" / "chameleon"
     )
-    for candidate in (Path("/var/log"), fallback):
+    for candidate in (Path("/var/log/chameleon"), fallback):
         if _is_writable_dir(candidate):
             return candidate
     return fallback
@@ -80,7 +80,13 @@ class IpSinkRouter:
             retention="10 days",
             compression="zip",
             enqueue=True,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} | {message}",
+            colorize=True,
+            format=(
+                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                + "<level>{level: <8}</level> | "
+                + "<cyan>{name}</cyan> | "
+                + "<level>{message}</level>"
+            ),
             filter=lambda r, _ip=ip: r["extra"].get("ip") == _ip,
         )
         self._handlers[ip] = handler_id
