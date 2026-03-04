@@ -1,5 +1,5 @@
 class CredCache:
-    """Caches the first successful credential per IP and enforces it on repeat logins."""
+    """Caches the first successful credential per IP and enforces it on repeats."""
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[str, str]] = {}
