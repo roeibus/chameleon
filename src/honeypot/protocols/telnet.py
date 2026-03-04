@@ -44,10 +44,10 @@ class TelnetBridge(SessionBridge):
 
         await asyncio.sleep(1)
 
-        if not self._cred_cache.is_new(
+        if not self._cred_cache.allows(
             extract_ip(writer), safe_decode(username), safe_decode(password)
         ):
-            logger.info("[~] Repeated credentials from known IP, denying")
+            logger.info("[~] Credentials rejected for known IP, denying")
             await safe_write(writer, b"\r\nLogin incorrect\r\n")
             return False
 
