@@ -36,7 +36,7 @@ class _PasswordAuthServer(SSHServer):
     def validate_password(self, username: str, password: str) -> bool:
         with logger.contextualize(ip=self._ip, bridge="ssh"):
             log_login_attempt(username, password)
-            if not self._cred_cache.is_new(self._ip, username, password):
+            if not self._cred_cache.allows(self._ip, username, password):
                 logger.info("[~] Repeated credentials from known IP, denying")
                 return False
         return True
