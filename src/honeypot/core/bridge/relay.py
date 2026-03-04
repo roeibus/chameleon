@@ -10,7 +10,7 @@ from honeypot.core.bridge.base import (
     AsyncWriter,
 )
 from honeypot.core.metrics import MetricsManager
-from honeypot.utils import LineBuffer, RaceGroup, safe_decode
+from honeypot.utils import LineBuffer, RaceGroup
 
 
 async def forward_input(
