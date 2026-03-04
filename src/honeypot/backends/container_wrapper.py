@@ -55,7 +55,10 @@ class ContainerWrapper[Config: ContainerConfig = ContainerConfig]:
         if self._inner_container:
             try:
                 logger.info(f"[-] Nuking container {self.inner_container.short_id}...")
-                self.inner_container.kill()
+                try:
+                    self.inner_container.kill()
+                except APIError:
+                    pass  # container already stopped
                 self.inner_container.remove()
             except (APIError, NotFound) as e:
                 logger.error(f"Error during removal: {e}")
