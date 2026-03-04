@@ -10,7 +10,7 @@ from honeypot.core.bridge.base import (
     AsyncWriter,
 )
 from honeypot.core.metrics import MetricsManager
-from honeypot.utils import LineBuffer, RaceGroup, safe_decode
+from honeypot.utils import LineBuffer, RaceGroup
 
 
 async def forward_input(
@@ -32,16 +32,18 @@ async def forward_input(
 async def forward_output(
     writer: AsyncWriter, backend: Backend, protocol: Protocol
 ) -> None:
+    buf = LineBuffer()
     while True:
         data = await backend.read(RECV_BUFFER_SIZE)
         if not data:
+            if remaining := buf.flush():
+                logger.info(f"← {remaining[:MAX_OUTPUT_LOG]}")
             break
-        text = safe_decode(data, limit=MAX_OUTPUT_LOG).rstrip()
-        if text:
-            logger.debug(f"← {text}")
         MetricsManager.record_bytes(protocol, "rx", len(data))
         writer.write(data)
         await writer.drain()
+        for line in buf.feed(data):
+            logger.info(f"← {line[:MAX_OUTPUT_LOG]}")
 
 
 async def relay(
